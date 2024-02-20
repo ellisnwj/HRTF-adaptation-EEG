@@ -13,7 +13,7 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'Fee'
+subject_id = 'test'
 condition = 'Ears Free'
 subject_dir = data_dir / 'experiment' / 'familiarization' / subject_id / condition
 
@@ -44,12 +44,20 @@ def familiarization_test(target_speakers, repetitions, subject_dir):
     # probe
     probe_duration = 0.1
     probe_n_samples = int(numpy.round(probe_duration * samplerate))
-    probes = slab.Precomputed(lambda: slab.Sound.pinknoise(duration=probe_duration), n=20)
+    probes = slab.Precomputed(lambda: slab.Sound.pinknoise(duration=probe_duration, level=75), n=20)
     # set probe buffer parameters
     freefield.write(tag='n_probe', value=probe_n_samples, processors='RX81')
+
     # probe-adapter-cross-fading
-    probe_onset = adapter_n_samples - int(0.005 * samplerate)  # delay of probe vs adapter
-    freefield.write(tag='probe_onset', value=probe_onset, processors='RX81')
+    adapter_ramp_onset = adapter_n_samples - int(0.005 * samplerate)
+    freefield.write(tag='adapter_ramp_onset', value=adapter_ramp_onset, processors='RP2')
+    # delay of probe vs adapter, plus time the sound needs to reach the eardrum
+    sound_travel_delay = int(1.4 / 344 * samplerate)
+    dac_delay_RX8 = 24
+    dac_delay_RP2 = 30
+    dac_delay = dac_delay_RX8 - dac_delay_RP2
+    probe_ramp_onset = adapter_ramp_onset - sound_travel_delay - dac_delay
+    freefield.write(tag='probe_onset', value=probe_ramp_onset, processors='RX81')
 
     # signal tone
     tone = slab.Sound.tone(frequency=1000, duration=0.25, level=70)
@@ -88,15 +96,19 @@ def play_trial(target_speaker_id):
     freefield.calibrate_sensor(led_feedback=True, button_control=True)
     # play adaptor and probe
     freefield.play()
-    # activate led
-    if sequence.this_n < 15: # make sure the light is only activated for the first 15 trials
+
+    # activate led at speaker position in the first 15 trials
+    if sequence.this_n < 15:  # make sure the light is only activated for the first 15 trials
         while not freefield.read('playback', 'RX81') == 1:  # wait until probe onset
             time.sleep(0.01)
         freefield.write('bitmask', value=probe_speaker.digital_channel, processors='RX81')
         # freefield.wait_to_finish_playing()
         time.sleep(.5)
         freefield.write('bitmask', value=0, processors='RX81')
-        # todo make sure the light is on for an adequate amount of time
+    else:
+        # wait until sound has finished playing
+        time.sleep(adapter_l.duration + probe.duration)
+
     # get headpose with a button response
     response = 0
     while not response:
@@ -108,8 +120,13 @@ def play_trial(target_speaker_id):
         response = freefield.read('response', processor='RP2')
     if all(pose):
         print('Response| azimuth: %.1f, elevation: %.1f' % (pose[0], pose[1]))
+
+    # play confirmation sound
+    freefield.write(tag='ch_tone', value=1, processors='RX81')
     freefield.play('zBusB')
     time.sleep(0.25)  # wait until the tone has played
+    freefield.write(tag='ch_tone', value=99, processors='RX81')
+
     print(f'{sequence.this_n}')
     return numpy.array((pose, (probe_speaker.azimuth, probe_speaker.elevation)))
 

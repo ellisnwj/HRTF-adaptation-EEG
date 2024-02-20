@@ -14,13 +14,12 @@ samplerate = 48828
 slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
-
 probe_level = 75
 repetitions = 1  # number of repetitions per speaker
 probe_speaker_id = 23
 adapter_duration = 1.0
 probe_duration = 0.1
-hp=200
+hp = 200
 
 def get_adapter_level(probe_level, repetitions=1, hp=hp):
     if not freefield.PROCESSORS.mode:
@@ -161,6 +160,7 @@ def test_calibration(adapter_level_l, adapter_level_r, probe_level, adapter_dura
 
     recording.channel(1).waveform()
     plt.xlim(0.995, 1.005)
+
 
     f1 = plt.figure()
     f2 = plt.figure()
