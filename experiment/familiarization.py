@@ -15,7 +15,7 @@ data_dir = Path.cwd() / 'data'
 # initial test
 subject_id = 'Fee'
 condition = 'Ears Free'
-subject_dir = data_dir / 'experiment' / 'familiarization' / subject_id / condition
+subject_dir = data_dir / 'experiment' / 'behavior' / 'familiarization' / subject_id / condition
 
 
 repetitions = 6  # number of repetitions per speaker
