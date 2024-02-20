@@ -15,8 +15,8 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'test'
-condition = 'Ear molds'
+subject_id = 'Nico'
+condition = 'Ear Molds'
 subject_dir = data_dir / 'experiment' / 'EEG' / subject_id / condition
 
 repetitions = 60  # number of repetitions per speaker
@@ -92,7 +92,7 @@ def eeg_test(target_speakers, repetitions, subject_dir):
         for target_speaker_id in sequence:
             sequence.add_response(play_trial(target_speaker_id))  # play trial
             time.sleep(isi - 0.195)  # account for the time it needs to write RCX_files to the processor (0.195 seconds)
-            sequence.save_pickle(subject_dir / str(('familiarization' + '_block_%i' + date.strftime('_%d.%m')) % block),
+            sequence.save_pickle(subject_dir / str(('eeg' + '_block_%i' + date.strftime('_%d.%m')) % block),
                                  clobber=True)    # save trialsequence
         # freefield.write('bitmask', value=0, processors='RX81')  # turn off LED
         input("Press Enter to start the next Block.")

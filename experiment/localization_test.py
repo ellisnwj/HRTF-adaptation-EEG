@@ -11,8 +11,8 @@ from analysis.plotting.localization_plot import localization_accuracy
 fs = 48828
 slab.set_default_samplerate(fs)
 #test
-subject_id = 'Zofia'
-condition = 'Ear molds 2'
+subject_id = 'Nico'
+condition = 'Ear Molds'
 data_dir = Path.cwd() / 'data' / 'experiment' / 'localization' / subject_id / condition
 
 repetitions = 3  # number of repetitions per speaker
