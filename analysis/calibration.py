@@ -74,7 +74,7 @@ def get_adapter_level(probe_level, repetitions=1, hp=hp):
         # record adapter
         for r in range(repetitions):
             freefield.play()
-            time.sleep(adapter_duration)
+            time.sleep(signal_duration)
             rec_l = freefield.read('datal', 'RP2', n_rec)
             rec_r = freefield.read('datar', 'RP2', n_rec)
             recs.append([rec_l[1000:], rec_r[1000:]])
@@ -90,28 +90,23 @@ def get_adapter_level(probe_level, repetitions=1, hp=hp):
             break
     return adapter_level_l, adapter_level_r
 
-def test_calibration(adapter_level_l, adapter_level_r, probe_level, adapter_duration, probe_duration):
+def test_calibration(adapter_level_l, adapter_level_r, probe_level, adapter_duration=1.0, probe_duration=0.1):
     [probe_speaker] = freefield.pick_speakers(probe_speaker_id)  # todo test for different speakers
     filter = slab.Filter.band('hp', (200))
     n_adapter = int(adapter_duration * samplerate)
 
-    # make the adapter a bit longer so the ramp won't get clipped
-    adapter_duration += 0.2
+    adapter_duration += 0.2    # make the adapter a bit longer so the ramp won't get clipped
+
 
     # test time and level calibration with a tone
-    probe = slab.Sound.tone(duration=probe_duration, level=probe_level, frequency=4000)  # test recording with a tone
-    adapter_l = slab.Sound.tone(duration=adapter_duration, level=adapter_level_l, frequency=4000)
-    adapter_r = slab.Sound.tone(duration=adapter_duration, level=adapter_level_r, frequency=4000)
+    # probe = slab.Sound.tone(duration=probe_duration, level=probe_level, frequency=4000)  # test recording with a tone
+    # adapter_l = slab.Sound.tone(duration=adapter_duration, level=adapter_level_l, frequency=4000)
+    # adapter_r = slab.Sound.tone(duration=adapter_duration, level=adapter_level_r, frequency=4000)
 
     # pink noise (experiment conditions)
-    # probe = slab.Sound.pinknoise(duration=probe_duration, level=probe_level)
-    # adapter_l = slab.Sound.pinknoise(duration=adapter_duration, level=adapter_level_l)
-    # adapter_r = slab.Sound.pinknoise(duration=adapter_duration, level=adapter_level_r)
-
-    # ramping
-    # probe = probe.ramp(when='both', duration=0.005)
-    # adapter_l = adapter_l.ramp(when='both', duration=0.005)
-    # adapter_r = adapter_r.ramp(when='both', duration=0.005)
+    probe = slab.Sound.pinknoise(duration=probe_duration, level=probe_level)
+    adapter_l = slab.Sound.pinknoise(duration=adapter_duration, level=adapter_level_l)
+    adapter_r = slab.Sound.pinknoise(duration=adapter_duration, level=adapter_level_r)
 
     # probe-adapter-cross-fading
     adapter_ramp_onset = n_adapter - int(0.005 * samplerate)
@@ -143,7 +138,7 @@ def test_calibration(adapter_level_l, adapter_level_r, probe_level, adapter_dura
     # test seperately
     freefield.write(tag='adapter_ch_1', value=1, processors='RP2')
     freefield.write(tag='adapter_ch_2', value=2, processors='RP2')
-    freefield.write(tag='probe_ch', value=99, processors=probe_speaker.analog_proc)
+    freefield.write(tag='probe_ch', value=1, processors=probe_speaker.analog_proc)
 
     # play
     freefield.play()
@@ -157,9 +152,11 @@ def test_calibration(adapter_level_l, adapter_level_r, probe_level, adapter_dura
     # plot
     recording.channel(0).waveform()
     plt.xlim(0.995, 1.01)
+    plt.title('Adapter + Probe left')
 
     recording.channel(1).waveform()
-    plt.xlim(0.995, 1.005)
+    plt.xlim(0.995, 1.01)
+    plt.title('Adapter + Probe right')
 
 
     f1 = plt.figure()
