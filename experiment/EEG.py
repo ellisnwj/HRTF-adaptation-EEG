@@ -86,7 +86,7 @@ def eeg_test(target_speakers, repetitions, subject_dir):
         for target_speaker_id in sequence:
             sequence.add_response(play_trial(target_speaker_id))  # play trial
             time.sleep(isi - 0.195)  # account for the time it needs to write RCX_files to the processor (0.195 seconds)
-            sequence.save_pickle(subject_dir / str(('familiarization' + '_block_%i' + date.strftime('_%d.%m')) % block),
+            sequence.save_pickle(subject_dir / str(('eeg' + '_block_%i' + date.strftime('_%d.%m')) % block),
                                  clobber=True)    # save trialsequence
         input("Press Enter to start the next Block.")
     return
@@ -96,6 +96,7 @@ def play_trial(target_speaker_id):
     probe = random.choice(probes)
     adapter_l = random.choice(adapters_l)
     adapter_r = random.choice(adapters_r)
+    # get probe speaker
     [probe_speaker] = freefield.pick_speakers(target_speaker_id)
 
     # write probe and adapter to RCX_files
@@ -113,10 +114,14 @@ def play_trial(target_speaker_id):
     # play adaptor and probe
     freefield.play()
     time.sleep(1.1)  # wait for the stimuli to finish playing
-    pose = (None, None)
+
+    # in 5% of trials: get localization response
     if sequence.this_n in response_trials.tolist():
-        freefield.set_logger('error')
-        freefield.play('zBusB')  # play tone
+        # play tone to indicate to the participant that this is a response trial
+        freefield.write(tag='ch_tone', value=1, processors='RX81')
+        freefield.play('zBusB')
+        time.sleep(0.25)  # wait until the tone has played
+        freefield.write(tag='ch_tone', value=99, processors='RX81')
         # -- get head pose offset --- #
         freefield.calibrate_sensor(led_feedback=False, button_control=False)
         # get headpose with a button response
@@ -131,11 +136,17 @@ def play_trial(target_speaker_id):
             response = freefield.read('response', processor='RP2')
         if all(pose):
             print('Response| azimuth: %.1f, elevation: %.1f' % (pose[0], pose[1]))
+        # play confirmation sound
+        freefield.write(tag='ch_tone', value=1, processors='RX81')
         freefield.play('zBusB')
-        # freefield.write('bitmask', value=8, processors='RX81')  # turn on LED
         time.sleep(0.25)  # wait until the tone has played
+        freefield.write(tag='ch_tone', value=99, processors='RX81')
+        # participants should return to the fixation cross and press a button to continue
         freefield.wait_for_button()
-        freefield.set_logger('error')
+
+    # otherwise return empty pose
+    else:
+        pose = (None, None)
     print(sequence.this_n)
     return numpy.array((pose, (probe_speaker.azimuth, probe_speaker.elevation)))
 

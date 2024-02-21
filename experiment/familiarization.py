@@ -92,15 +92,19 @@ def play_trial(target_speaker_id):
     freefield.calibrate_sensor(led_feedback=True, button_control=True)
     # play adaptor and probe
     freefield.play()
-    # activate led
-    if sequence.this_n < 15: # make sure the light is only activated for the first 15 trials
+
+    # activate led at speaker position in the first 15 trials
+    if sequence.this_n < 15:  # make sure the light is only activated for the first 15 trials
         while not freefield.read('playback', 'RX81') == 1:  # wait until probe onset
             time.sleep(0.01)
         freefield.write('bitmask', value=probe_speaker.digital_channel, processors='RX81')
         # freefield.wait_to_finish_playing()
         time.sleep(.5)
         freefield.write('bitmask', value=0, processors='RX81')
-        # todo make sure the light is on for an adequate amount of time
+    else:
+        # wait until sound has finished playing
+        time.sleep(adapter_l.duration + probe.duration)
+
     # get headpose with a button response
     response = 0
     while not response:
@@ -112,8 +116,13 @@ def play_trial(target_speaker_id):
         response = freefield.read('response', processor='RP2')
     if all(pose):
         print('Response| azimuth: %.1f, elevation: %.1f' % (pose[0], pose[1]))
+
+    # play confirmation sound
+    freefield.write(tag='ch_tone', value=1, processors='RX81')
     freefield.play('zBusB')
     time.sleep(0.25)  # wait until the tone has played
+    freefield.write(tag='ch_tone', value=99, processors='RX81')
+
     print(f'{sequence.this_n}')
     return numpy.array((pose, (probe_speaker.azimuth, probe_speaker.elevation)))
 
