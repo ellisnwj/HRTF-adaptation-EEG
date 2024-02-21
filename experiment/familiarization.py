@@ -15,7 +15,7 @@ data_dir = Path.cwd() / 'data'
 # initial test
 subject_id = 'Fee'
 condition = 'Ears Free'
-subject_dir = data_dir / 'experiment' / 'behavior' / 'familiarization' / subject_id / condition
+subject_dir = data_dir / 'experiment' / 'pilot' / 'behavior' / 'familiarization' / subject_id / condition
 
 
 repetitions = 6  # number of repetitions per speaker
@@ -45,8 +45,6 @@ def familiarization_test(target_speakers, repetitions, subject_dir):
     probe_duration = 0.1
     probe_n_samples = int(numpy.round(probe_duration * samplerate))
     probes = slab.Precomputed(lambda: slab.Sound.pinknoise(duration=probe_duration), n=20)
-    # set probe buffer parameters
-    freefield.write(tag='n_probe', value=probe_n_samples, processors='RX81')
 
     # probe-adapter-cross-fading
     adapter_ramp_onset = adapter_n_samples - int(0.005 * samplerate)
@@ -61,8 +59,7 @@ def familiarization_test(target_speakers, repetitions, subject_dir):
 
     # signal tone
     tone = slab.Sound.tone(frequency=1000, duration=0.25, level=70)
-    freefield.write(tag='n_tone', value=tone.n_samples, processors='RX81')
-    freefield.write(tag='data_tone', value=tone.data, processors='RX81')
+    freefield.set_signal_and_speaker(tone, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone', n_samples_tag='n_tone')
 
     input("Press Enter to start.")
 
@@ -82,15 +79,14 @@ def play_trial(target_speaker_id):
     probe = random.choice(probes)
     adapter_l = random.choice(adapters_l)
     adapter_r = random.choice(adapters_r)
+    [probe_speaker] = freefield.pick_speakers(target_speaker_id)
 
-    # write probe and adapter
-    freefield.write(tag='data_probe', value=probe.data, processors='RX81')
+
+    # write probe and adapter to RCX_files
+    freefield.set_signal_and_speaker(probe, target_speaker_id, equalize=True, data_tag='data_probe',
+                                     chan_tag='probe_ch', n_samples_tag='n_probe')
     freefield.write(tag='data_adapter_l', value=adapter_l.data, processors='RP2')
     freefield.write(tag='data_adapter_r', value=adapter_r.data, processors='RP2')
-
-    # set probe speaker
-    [probe_speaker] = freefield.pick_speakers(target_speaker_id)
-    freefield.write(tag='probe_ch', value=probe_speaker.analog_channel, processors=probe_speaker.analog_proc)
 
     # -- get head pose offset --- #
     freefield.calibrate_sensor(led_feedback=True, button_control=True)
