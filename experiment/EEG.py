@@ -25,6 +25,7 @@ target_speakers = (20, 22, 24, 26)
 probe_level = 75
 adapter_levels = (44, 49)  # calibrated adapter levels, left first
 isi = 1.0  # inter stim interval in seconds
+isi_corrected = isi - 0.43  # account for the time it takes to write stimuli to the buffer
 
 def eeg_test(target_speakers, repetitions, subject_dir):
     global sequence, tone, probes, adapters_l, adapters_r, response_trials
@@ -85,7 +86,7 @@ def eeg_test(target_speakers, repetitions, subject_dir):
         # play trial sequence
         for target_speaker_id in sequence:
             sequence.add_response(play_trial(target_speaker_id))  # play trial
-            time.sleep(isi - 0.195)  # account for the time it needs to write RCX_files to the processor (0.195 seconds)
+            time.sleep(isi_corrected)  # account for the time it needs to write stimuli to processor buffer (0.195 seconds)
             sequence.save_pickle(subject_dir / str(('eeg' + '_block_%i' + date.strftime('_%d.%m')) % block),
                                  clobber=True)    # save trialsequence
         input("Press Enter to start the next Block.")
