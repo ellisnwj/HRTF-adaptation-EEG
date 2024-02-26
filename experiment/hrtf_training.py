@@ -10,7 +10,14 @@ data_dir = Path.cwd() / 'data'
 fs = 48828
 slab.set_default_samplerate(fs)
 
-target_p = None  # use inform target probability distribution
+subject_id = 'Fee'
+subject_dir = data_dir / 'experiment' / 'pilot' / 'behavior' / 'localization' / subject_id / 'Ear molds'
+try:
+    sequence = localization.load_latest(subject_dir)
+    target_p = localization.get_target_proabilities(sequence, show=True)
+except:
+    print('Could not load localization final_data. Using equal target probabilities.')
+    target_p = None
 
 # max_pulse_interval: maximal pulse interval in ms
 # target_window: target window as euclidean angular distance of head pose from target speaker
