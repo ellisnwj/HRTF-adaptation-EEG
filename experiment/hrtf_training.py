@@ -47,7 +47,7 @@ def hrtf_training(max_pulse_interval=500, target_size=3, target_time=0.5, trial_
     # set variables to control pulse train and goal condition
     table_file = freefield.DIR / 'final_data' / 'tables' / Path(f'speakertable_dome.txt')
     speakers = numpy.loadtxt(table_file, skiprows=1, usecols=(0, 3, 4), delimiter=",", dtype=float)
-    speakers = numpy.delete(speakers, [19, 23, 27], axis=0)
+    c_speakers = numpy.delete(speakers, [23, 4], axis=0)  # remove disconnected speakers
     pulse_attr = {'max_distance': la.norm(numpy.min(speakers[:, 1:], axis=0) - [0, 0]),
                   'max_pulse_interval': max_pulse_interval}
     goal_attr = {'target_size': target_size, 'target_time': target_time,

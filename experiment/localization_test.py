@@ -31,7 +31,7 @@ def localization_test(subject_id, data_dir, condition, repetitions):
     # read list of speaker locations
     table_file = freefield.DIR / 'data' / 'tables' / Path(f'speakertable_dome.txt')
     speakers = numpy.loadtxt(table_file, skiprows=1, usecols=(0, 3, 4), delimiter=",", dtype=float)
-    c_speakers = numpy.delete(speakers, [19, 23, 27], axis=0)  # remove disconnected speaker from speaker_list
+    c_speakers = numpy.delete(speakers, [23, 4], axis=0)  # remove disconnected speaker from speaker_list
     sequence = numpy.zeros(repetitions * len(c_speakers)).astype('int')
     print('Setting target sequence...')
     while True:  # create n_repetitions sequences with more than 35° angular distance between successive targets
