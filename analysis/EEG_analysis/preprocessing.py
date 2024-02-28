@@ -1,16 +1,21 @@
 from pathlib import Path
 import json
-import numpy as np
+import numpy
+from scipy import signal
+from matplotlib import pyplot as plt
 from mne import events_from_annotations, compute_raw_covariance
+import mne
 from mne.io import read_raw_brainvision
 from mne.epochs import Epochs
 from autoreject import Ransac, AutoReject
 from mne.preprocessing import ICA, read_ica, corrmap
 from meegkit.dss import dss_line
 
+
+conditions = ['Free Ears', 'Molds']
+
 data_dir = Path.cwd() / 'data'
 eeg_dir = data_dir / 'experiment' /'pilot' / 'EEG'
-condition = 'Free Ears'
 
 electrode_names = json.load(open(data_dir / 'misc' / "electrode_names.json"))
 # tmin, tmax and event_ids for both experiments
@@ -22,90 +27,130 @@ epoch_parameters = [
     "-12.5": 24,
     "-37.5": 26}]
 
-for subfolder in eeg_dir.glob('*'):
-    print(subfolder)
-header_file = subfolder / condition / 'Zofia Pilot_07.02.24_1.vhdr'
-raw = read_raw_brainvision(header_file)  # read raw EEG from file
-# todo make sure the header file contains the correct file names
+# get subject files
+for condition in conditions:
+    for subfolder in eeg_dir.glob('*'):
+        print(subfolder)
+        # concatenate raw eeg data across blocks
+        if (subfolder / condition).exists():
+            outdir = subfolder / condition / 'preprocessed' # create output directory
+            if not outdir.exists():
+                outdir.mkdir()
+            # collect header files
+            header_files = list((subfolder / condition).glob('*.vhdr'))
+            raws = []
+            # concatenate blocks
+            for header_file in header_files:
+                raws.append(read_raw_brainvision(header_file))
+            raw = mne.concatenate_raws(raws, preload=None, events_list=None, on_mismatch='raise', verbose=None)
 
-tmin, tmax, event_ids = epoch_parameters  # get epoch parameters
+            # inspect raw data
+            # raw.plot()
+            # raw.plot_psd(xscale='linear', fmin=0, fmax=40)
+            # raw.compute_psd().plot(average=True)
 
-outdir = subfolder / condition / 'preprocessed' # create output directory
-if not outdir.exists():
-    outdir.mkdir()
+            # assign channel names to the data
+            raw.rename_channels(electrode_names)
+            raw.set_montage("standard_1020")  # ------ use brainvision montage instead?
+            # montage_path = data_dir / 'misc' / "AS-96_REF.bvef"  # original version
+            # montage = mne.channels.read_custom_montage(fname=montage_path)
+            # raw.set_montage(montage)
 
-raw.load_data()
-raw.set_montage("standard_1020")
-events = events_from_annotations(raw)[0]
+            # get events
+            events = events_from_annotations(raw)[0]
+            events = events[[not e in [99999, 10, 12, 14, 16] for e in events[:, 2]]]
 
-# remove all meaningless event codes
-events = events[[not e in [99999] for e in events[:, 2]]]
+            print('STEP 1: Remove power line noise and apply minimum-phase highpass filter')
+            # raw = raw.load_data()  #
+            X = raw.get_data().T
+            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=5)  # (Cheveigné, 2020)
 
-# STEP 1: Remove power line noise and apply minimum-phase highpass filter
-X = raw.get_data().T
-X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=5)
-raw._data = X.T  # put the data back into raw
-del X
-raw = raw.filter(l_freq=1, h_freq=None, phase="minimum")
+            # plot changes made by the filter:
+            # power line noise is not fully removed?
+            # seems to be a soft procedure to retain as much original data as possible
+            # plot before / after zapline denoising
+            # f, ax = plt.subplots(1, 2, sharey=True)
+            # f, Pxx = signal.welch(raw.get_data().T, 500, nperseg=500, axis=0, return_onesided=True)
+            # ax[0].semilogy(f, Pxx)
+            # f, Pxx = signal.welch(X, 500, nperseg=500, axis=0, return_onesided=True)
+            # ax[1].semilogy(f, Pxx)
+            # ax[0].set_xlabel("frequency [Hz]")
+            # ax[1].set_xlabel("frequency [Hz]")
+            # ax[0].set_ylabel("PSD [V**2/Hz]")
+            # ax[0].set_title("before")
+            # ax[1].set_title("after")
+            # plt.show()
 
-# STEP 2: Epoch and downsample the data
-epochs = Epochs(
-    raw,
-    events,
-    event_id=event_ids,
-    tmin=tmin,
-    tmax=tmax,
-    baseline=None,
-    preload=True,
-)
+            raw._data = X.T  # put the data back into raw
+            del X
 
-# use raw data to compute the noise covariance
-tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]
-raw.crop(0, tmax_noise)
-cov = compute_raw_covariance(raw)
-cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)
-del raw
+            # remove line noise (eg. stray electromagnetic signals)
+            raw.load_data()  # load data to filter
+            raw = raw.filter(l_freq=1, h_freq=None, phase="minimum")
 
-# STEP 3: Remove target and post-target trials
-idx = (
-    np.genfromtxt(
-        subfolder / "beh" / f"{subfolder.name}_task-oneback_beh.tsv",
-        delimiter="\t",
-        usecols=0,
-        skip_header=1,
-        dtype=int,
-    )
-    + 1
-)
-if idx[-1] == len(epochs):  # if the last trial was a target remove it
-    idx = idx[:-1]
-epochs.drop(idx)
+            print('STEP 2: Epoch and downsample the data')
+            # remove all meaningless event codes, including post trial events
+            tmin, tmax, event_ids = epoch_parameters  # get epoch parameters
+            epochs = Epochs(
+                raw,
+                events,
+                event_id=event_ids,
+                tmin=tmin,
+                tmax=tmax,
+                baseline=None,
+                preload=True,
+            )
 
-# STEP 4: interpolate bad channels and re-reference to average
-r = Ransac(n_jobs=4)
-epochs = r.fit_transform(epochs)
-epochs.set_eeg_reference("average")
-del r
+            # extra: use raw data to compute the noise covariance  # for later analysis?
+            tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]  # cut raw data before first stimulus
+            raw.crop(0, tmax_noise)
+            cov = compute_raw_covariance(raw)  # compute covariance matrix
+            cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
+            del raw
 
-# STEP 5: Blink rejection with ICA
-reference = read_ica(root / "code" / "reference-ica.fif")
-component = reference.labels_["blinks"]
-ica = ICA(n_components=0.999, method="fastica")
-ica.fit(epochs)
-ica.labels_["blinks"] = []
-corrmap(
-    [reference, ica],
-    template=(0, component[0]),
-    label="blinks",
-    plot=False,
-    threshold=0.75,
-)
-ica.apply(epochs, exclude=ica.labels_["blinks"])
-ica.save(outdir / f"{subfolder.name}-ica.fif", overwrite=True)
-del ica
+            print('STEP 4: interpolate bad channels and re-reference to average')
+            r = Ransac(n_jobs=4)  # ransac identifies bad channels based on correlation
+            epochs = r.fit_transform(epochs)
+            epochs.set_eeg_reference("average")
+            del r
+            # 1 Interpolate all channels from a subset of channels (fraction denoted as min_channels),
+            # repeat n_resample times.
+            # 2 See if correlation of interpolated channels to original channel is above 75% per epoch (min_corr)
+            # 3 If more than unbroken_time fraction of epochs have a lower correlation than that,
+            # add channel to self.bad_chs_
 
-# STEP 6: Reject / repair bad epochs
-ar = AutoReject(n_interpolate=[0, 1, 2, 4, 8, 16], n_jobs=4)
-epochs = ar.fit_transform(epochs)
-epochs.save(outdir / f"{subfolder.name}-epo.fif", overwrite=True)
-ar.save(outdir / f"{subfolder.name}-autoreject.h5", overwrite=True)
+
+            print('STEP 5: Blink rejection with ICA')
+            # reference = read_ica(data_dir / 'misc' / 'reference-ica.fif')
+            # component = reference.labels_["blinks"]
+            ica = ICA(n_components=0.999, method="fastica")
+            ica.fit(epochs)
+            ica.labels_["blinks"] = [0]
+            # corrmap(
+            #     [ica, ica],
+            #     template=(0, component[0]),
+            #     label="blinks",
+            #     plot=False,
+            #     threshold=0.75,
+            # )
+            # ica.plot_components(picks=range(10))
+            # ica.plot_sources(epochs)
+            ica.apply(epochs, exclude=ica.labels_["blinks"])
+            ica.save(outdir / f"{subfolder.name}-ica.fif", overwrite=True)
+            del ica
+
+            print('STEP 6: Reject / repair bad epochs')
+            # ar = AutoReject(n_interpolate=[0, 1, 2, 4, 8, 16], n_jobs=4)
+            ar = AutoReject(n_jobs=4)
+            epochs = ar.fit_transform(epochs)  # Bigdely-Shamlo et al., 2015)?
+            # apply threshold \tau_i to reject trials in the train set
+            # calculate the mean of the signal( for each sensor and timepoint) over the GOOD (= not rejected)
+            # trials in the train set
+            # calculate the median of the signal(for each sensor and timepoint) over ALL trials in the test set
+            # compare both of these signals and calculate the error
+            # the candidate threshold with the lowest error is the best rejection threshold for a global rejection
+
+
+            #  save peprocessed epochs to file
+            epochs.save(outdir / f"{subfolder.name}-epo.fif", overwrite=True)
+            ar.save(outdir / f"{subfolder.name}-autoreject.h5", overwrite=True)
