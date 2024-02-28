@@ -60,14 +60,12 @@ for condition in conditions:
             events = events_from_annotations(raw)[0]
             events = events[[not e in [99999, 10, 12, 14, 16] for e in events[:, 2]]]
 
-            print('STEP 1: Remove power line noise and apply minimum-phase highpass filter')
+            print('STEP 1: Remove power line noise and apply minimum-phase highpass filter')  # Cheveigné, 2020
             # raw = raw.load_data()  #
             X = raw.get_data().T
-            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=5)  # (Cheveigné, 2020)
+            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=5)
 
             # plot changes made by the filter:
-            # power line noise is not fully removed?
-            # seems to be a soft procedure to retain as much original data as possible
             # plot before / after zapline denoising
             # f, ax = plt.subplots(1, 2, sharey=True)
             # f, Pxx = signal.welch(raw.get_data().T, 500, nperseg=500, axis=0, return_onesided=True)
@@ -80,6 +78,7 @@ for condition in conditions:
             # ax[0].set_title("before")
             # ax[1].set_title("after")
             # plt.show()
+            # power line noise is not fully removed?
 
             raw._data = X.T  # put the data back into raw
             del X
@@ -87,6 +86,12 @@ for condition in conditions:
             # remove line noise (eg. stray electromagnetic signals)
             raw.load_data()  # load data to filter
             raw = raw.filter(l_freq=1, h_freq=None, phase="minimum")
+
+            # extra: use raw data to compute the noise covariance  # for later analysis?
+            tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]  # cut raw data before first stimulus
+            raw.crop(0, tmax_noise)
+            cov = compute_raw_covariance(raw)  # compute covariance matrix
+            cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
 
             print('STEP 2: Epoch and downsample the data')
             # remove all meaningless event codes, including post trial events
@@ -101,14 +106,9 @@ for condition in conditions:
                 preload=True,
             )
 
-            # extra: use raw data to compute the noise covariance  # for later analysis?
-            tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]  # cut raw data before first stimulus
-            raw.crop(0, tmax_noise)
-            cov = compute_raw_covariance(raw)  # compute covariance matrix
-            cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
             del raw
 
-            print('STEP 4: interpolate bad channels and re-reference to average')
+            print('STEP 4: interpolate bad channels and re-reference to average')  # Bigdely-Shamlo et al., 2015
             r = Ransac(n_jobs=4)  # ransac identifies bad channels based on correlation
             epochs = r.fit_transform(epochs)
             epochs.set_eeg_reference("average")
@@ -120,26 +120,20 @@ for condition in conditions:
             # add channel to self.bad_chs_
 
 
-            print('STEP 5: Blink rejection with ICA')
+            print('STEP 5: Blink rejection with ICA')  # Viola et al., 2009
             # reference = read_ica(data_dir / 'misc' / 'reference-ica.fif')
             # component = reference.labels_["blinks"]
             ica = ICA(n_components=0.999, method="fastica")
             ica.fit(epochs)
             ica.labels_["blinks"] = [0]
-            # corrmap(
-            #     [ica, ica],
-            #     template=(0, component[0]),
-            #     label="blinks",
-            #     plot=False,
-            #     threshold=0.75,
-            # )
+            # corrmap([ica, ica], template=(0, component[0]), label="blinks", plot=False, threshold=0.75)
             # ica.plot_components(picks=range(10))
             # ica.plot_sources(epochs)
             ica.apply(epochs, exclude=ica.labels_["blinks"])
             ica.save(outdir / f"{subfolder.name}-ica.fif", overwrite=True)
             del ica
 
-            print('STEP 6: Reject / repair bad epochs')
+            print('STEP 6: Reject / repair bad epochs')  # Jas et al., 2017
             # ar = AutoReject(n_interpolate=[0, 1, 2, 4, 8, 16], n_jobs=4)
             ar = AutoReject(n_jobs=4)
             epochs = ar.fit_transform(epochs)  # Bigdely-Shamlo et al., 2015)?
