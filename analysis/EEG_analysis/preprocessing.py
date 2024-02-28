@@ -63,35 +63,31 @@ for condition in conditions:
             print('STEP 1: Remove power line noise and apply minimum-phase highpass filter')  # Cheveigné, 2020
             # raw = raw.load_data()  #
             X = raw.get_data().T
-            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=5)
+            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=1)
 
             # plot changes made by the filter:
             # plot before / after zapline denoising
-            # f, ax = plt.subplots(1, 2, sharey=True)
-            # f, Pxx = signal.welch(raw.get_data().T, 500, nperseg=500, axis=0, return_onesided=True)
-            # ax[0].semilogy(f, Pxx)
-            # f, Pxx = signal.welch(X, 500, nperseg=500, axis=0, return_onesided=True)
-            # ax[1].semilogy(f, Pxx)
-            # ax[0].set_xlabel("frequency [Hz]")
-            # ax[1].set_xlabel("frequency [Hz]")
-            # ax[0].set_ylabel("PSD [V**2/Hz]")
-            # ax[0].set_title("before")
-            # ax[1].set_title("after")
-            # plt.show()
             # power line noise is not fully removed?
 
-            raw._data = X.T  # put the data back into raw
+            f, ax = plt.subplots(1, 2, sharey=True)
+            f, Pxx = signal.welch(raw.get_data().T, 500, nperseg=500, axis=0, return_onesided=True)
+            ax[0].semilogy(f, Pxx)
+            f, Pxx = signal.welch(X, 500, nperseg=500, axis=0, return_onesided=True)
+            ax[1].semilogy(f, Pxx)
+            ax[0].set_xlabel("frequency [Hz]")
+            ax[1].set_xlabel("frequency [Hz]")
+            ax[0].set_ylabel("PSD [V**2/Hz]")
+            ax[0].set_title("before")
+            ax[1].set_title("after")
+            plt.show()
+
+            # put the data back into raw
+            raw._data = X.T
             del X
 
             # remove line noise (eg. stray electromagnetic signals)
             raw.load_data()  # load data to filter
             raw = raw.filter(l_freq=1, h_freq=None, phase="minimum")
-
-            # extra: use raw data to compute the noise covariance  # for later analysis?
-            tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]  # cut raw data before first stimulus
-            raw.crop(0, tmax_noise)
-            cov = compute_raw_covariance(raw)  # compute covariance matrix
-            cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
 
             print('STEP 2: Epoch and downsample the data')
             # remove all meaningless event codes, including post trial events
@@ -105,6 +101,12 @@ for condition in conditions:
                 baseline=None,
                 preload=True,
             )
+
+            # extra: use raw data to compute the noise covariance  # for later analysis?
+            tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]  # cut raw data before first stimulus
+            raw.crop(0, tmax_noise)
+            cov = compute_raw_covariance(raw)  # compute covariance matrix
+            cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
 
             del raw
 
