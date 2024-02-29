@@ -14,7 +14,7 @@ subject_id = 'Fee'
 subject_dir = data_dir / 'experiment' / 'pilot' / 'behavior' / 'localization' / subject_id / 'Ear molds'
 try:
     sequence = localization.load_latest(subject_dir)
-    target_p = localization.get_target_proabilities(sequence, show=True)
+    target_p = localization.get_target_proabilities(sequence, show=False)
 except:
     print('Could not load localization final_data. Using equal target probabilities.')
     target_p = None
@@ -34,10 +34,11 @@ def hrtf_training(max_pulse_interval=500, target_size=3, target_time=0.5, trial_
                      ['RP2', 'RP2', data_dir / 'rcx' / 'arduino_analog.rcx']]
         freefield.initialize('dome', device=proc_list, sensor_tracking=True)
         freefield.load_equalization(data_dir / 'calibration' / 'calibration_dome_23.05')
+        freefield.set_logger('error')
     # generate sounds, set experiment parameters
     stim = slab.Sound.pinknoise(duration=10.0)
     freefield.write(tag='playbuflen', value=stim.n_samples, processors=['RX81', 'RX82'])
-    freefield.write(tag='final_data', value=stim.data, processors=['RX81', 'RX82'])
+    freefield.write(tag='data', value=stim.data, processors=['RX81', 'RX82'])
     coin = slab.Sound(data=data_dir / 'sounds' / 'coin.wav')  # load goal sound to buffer
     coins = slab.Sound(data=data_dir / 'sounds' / 'coins.wav')  # load goal sound to buffer
     coin.level, coins.level = 70, 70
@@ -45,9 +46,9 @@ def hrtf_training(max_pulse_interval=500, target_size=3, target_time=0.5, trial_
     buzzer = slab.Sound(data_dir / 'sounds' / 'buzzer.wav')
     buzzer.level = 75
     # set variables to control pulse train and goal condition
-    table_file = freefield.DIR / 'final_data' / 'tables' / Path(f'speakertable_dome.txt')
+    table_file = freefield.DIR / 'data' / 'tables' / Path(f'speakertable_dome.txt')
     speakers = numpy.loadtxt(table_file, skiprows=1, usecols=(0, 3, 4), delimiter=",", dtype=float)
-    c_speakers = numpy.delete(speakers, [23, 4], axis=0)  # remove disconnected speakers
+    c_speakers = numpy.delete(speakers, [23, 19, 27], axis=0)  # remove disconnected speakers
     pulse_attr = {'max_distance': la.norm(numpy.min(speakers[:, 1:], axis=0) - [0, 0]),
                   'max_pulse_interval': max_pulse_interval}
     goal_attr = {'target_size': target_size, 'target_time': target_time,
@@ -58,7 +59,7 @@ def hrtf_training(max_pulse_interval=500, target_size=3, target_time=0.5, trial_
         target_p = numpy.expand_dims(target_p[:, 3], axis=1)
     while True:  # loop over blocks
         # get list of speakers to play from
-        speaker_choices = speakers
+        speaker_choices = c_speakers
         speaker_choices = numpy.hstack((speaker_choices, target_p))
         [speaker] = speaker_choices[numpy.where(speaker_choices[:, 0] == int(numpy.random.choice(speaker_choices[:, 0],
                                                                     p=speaker_choices[:, 3])))][:3]
