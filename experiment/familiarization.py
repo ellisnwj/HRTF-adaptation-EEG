@@ -14,7 +14,7 @@ data_dir = Path.cwd() / 'data'
 
 # initial test
 subject_id = 'Fee'
-condition = 'Ears Free'
+condition = 'Free Ears'
 subject_dir = data_dir / 'experiment' / 'pilot' / 'behavior' / 'familiarization' / subject_id / condition
 
 

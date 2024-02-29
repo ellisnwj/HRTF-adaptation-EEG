@@ -107,7 +107,7 @@ def play_trial(target_speaker_id):
     freefield.write(tag='data_adapter_r', value=adapter_r.data, processors='RP2')
 
     # set eeg marker to current target speaker ID
-    if sequence.this_n in response_trials.tolist():  # use different eeg markers for response trials
+    if sequence.this_n-1 in response_trials.tolist():  # use different eeg markers for response trials
         freefield.write('eeg marker', value=target_speaker_id-10, processors='RX82')
     else:
         freefield.write('eeg marker', value=target_speaker_id, processors='RX82')
