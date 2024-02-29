@@ -5,9 +5,6 @@ import numpy
 import time
 import datetime
 date = datetime.datetime.now()
-# import matplotlib
-# matplotlib.use('GTK3Agg')
-from matplotlib import pyplot as plt
 from pathlib import Path
 
 samplerate = 48828
@@ -33,6 +30,8 @@ def eeg_test(target_speakers, repetitions, subject_dir):
                  ['RX82', 'RX8', data_dir / 'rcx' / 'play_probe.rcx'],
                  ['RP2', 'RP2', data_dir / 'rcx' / 'play_rec_adapter.rcx']]
     freefield.initialize('dome', device=proc_list, sensor_tracking=True)
+    freefield.load_equalization(file=Path.cwd() / 'data' / 'calibration' / 'calibration_dome_central.pkl')
+
     # todo create a good calibration file
     freefield.set_logger('error')
     # --- generate sounds ---- #
@@ -161,9 +160,12 @@ if __name__ == "__main__":
 
 import slab
 from pathlib import Path
+# import matplotlib
+# matplotlib.use('TkAgg')
+from matplotlib import pyplot as plt
 from analysis.plotting.localization_plot import localization_accuracy
 
-file_name = 'familiarization_block_0_31.01'
+file_name = 'localization_Yen_Ears free_12.02'
 
 for path in Path.cwd().glob("**/"+str(file_name)):
     file_path = path
@@ -179,4 +181,15 @@ axis.set_xlabel('Response Azimuth (degrees)')
 axis.set_ylabel('Response Elevation (degrees)')
 fig.suptitle(file_name)
 
+
+# fix azimuth error
+for i, entry in enumerate(sequence.data):
+    sequence.data[i][0][sequence.data[i][0] > 180] -= 360
+    
+for i, entry in enumerate(sequence.data):
+    sequence.data[i][0][sequence.data[i][0] < -180] += 360
+    
+# -------------- save ------------------#
+
+sequence.save_pickle(file_path, clobber=True)
 """

@@ -28,7 +28,8 @@ def familiarization_test(target_speakers, repetitions, subject_dir):
                  ['RX82', 'RX8', data_dir / 'rcx' / 'play_probe.rcx'],
                  ['RP2', 'RP2', data_dir / 'rcx' / 'play_rec_adapter.rcx']]
     freefield.initialize('dome', device=proc_list, sensor_tracking=True)
-    # todo create a good calibration file
+    freefield.load_equalization(file=Path.cwd() / 'data' / 'calibration' / 'calibration_dome_central.pkl')
+    freefield.set_logger('error')  # only forward messages when errors occur
 
     # --- generate sounds ---- #
     # adapter
