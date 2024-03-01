@@ -43,8 +43,8 @@ evoked_conditions = list(evoked_conditions.values())
 
 # write data
 evoked.save(eeg_dir / 'grand_average-ave.fif', overwrite=True)
-write_evokeds(eeg_dir / 'Free_Ears_grand_average_conditions-ave.fif', evoked_conditions[0], overwrite=True)
-write_evokeds(eeg_dir / 'Molds_grand_average_conditions-ave.fif', evoked_conditions[1], overwrite=True)
+write_evokeds(eeg_dir / 'Free_Ears_grand_average_conditions-ave.fif', list(evoked_conditions[0].values()), overwrite=True)
+write_evokeds(eeg_dir / 'Molds_grand_average_conditions-ave.fif', list(evoked_conditions[1].values()), overwrite=True)
 
 
 # """
