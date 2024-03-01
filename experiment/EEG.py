@@ -25,7 +25,7 @@ isi = 1.0  # inter stim interval in seconds
 isi_corrected = isi - 0.43  # account for the time it takes to write stimuli to the buffer
 
 def eeg_test(target_speakers, repetitions, subject_dir):
-    global sequence, tone, probes, adapters_l, adapters_r, response_trials
+    global sequence, tone, buzzer, probes, adapters_l, adapters_r, response_trials
     proc_list = [['RX81', 'RX8', data_dir / 'rcx' / 'play_probe.rcx'],
                  ['RX82', 'RX8', data_dir / 'rcx' / 'play_probe.rcx'],
                  ['RP2', 'RP2', data_dir / 'rcx' / 'play_rec_adapter.rcx']]
@@ -63,8 +63,11 @@ def eeg_test(target_speakers, repetitions, subject_dir):
     # signal tone
     tone = slab.Sound.tone(frequency=1000, duration=0.25, level=70)
     freefield.set_signal_and_speaker(tone, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone', n_samples_tag='n_tone')
+    buzzer = slab.Sound(data_dir / 'sounds' / 'buzzer.wav')
 
     input("Press Enter to start.")
+    pose_offset = freefield.get_head_pose('sensor')
+    # get reference head pose: make sure participants heads are oriented at the fixation mark!
 
     # create subject folder
     subject_dir.mkdir(parents=True, exist_ok=True)  # create subject RCX_files directory if it doesnt exist
@@ -76,7 +79,7 @@ def eeg_test(target_speakers, repetitions, subject_dir):
         response_trials = []
         for i in range(n_response_trials):
             temp = [0] * int(n_trials / n_response_trials)
-            temp[numpy.random.randint(2, n_response_trials-2)] = 1
+            temp[numpy.random.randint(1, n_response_trials)] = 1
             response_trials.extend(temp)
         response_trials = numpy.where(numpy.asarray(response_trials) == 1)[0]
         # generate random sequence of target speakers
@@ -92,6 +95,10 @@ def eeg_test(target_speakers, repetitions, subject_dir):
     return
 
 def play_trial(target_speaker_id):
+
+    #todo check elevation with feedback
+    test_headpose()
+
     # generate and write probe
     probe = random.choice(probes)
     adapter_l = random.choice(adapters_l)
@@ -123,7 +130,7 @@ def play_trial(target_speaker_id):
         time.sleep(0.25)  # wait until the tone has played
         freefield.write(tag='ch_tone', value=99, processors='RX81')
         # -- get head pose offset --- #
-        freefield.calibrate_sensor(led_feedback=False, button_control=False)
+        # freefield.calibrate_sensor(led_feedback=False, button_control=False)
         # get headpose with a button response
         time.sleep(0.25)
         response = 0
@@ -149,6 +156,22 @@ def play_trial(target_speaker_id):
         pose = (None, None)
     print(sequence.this_n)
     return numpy.array((pose, (probe_speaker.azimuth, probe_speaker.elevation)))
+
+def test_headpose():
+    # todo play warning sound if pose not correct and continue with button
+    pose = freefield.get_head_pose(method='sensor')
+    while numpy.abs(pose[0]) > 4:
+        # play warning sound
+        freefield.set_signal_and_speaker(buzzer, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone',
+                                         n_samples_tag='n_tone')
+        freefield.play('zBusB')
+        time.sleep(1)  # wait until the tone has played
+        freefield.set_signal_and_speaker(tone, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone',
+                                         n_samples_tag='n_tone')
+        freefield.write(tag='ch_tone', value=99, processors='RX81')
+        freefield.wait_for_button()  # wait for button response
+        pose = freefield.get_head_pose(method='sensor')  # check again
+    return
 
 if __name__ == "__main__":
     eeg_test(target_speakers, repetitions, subject_dir)
