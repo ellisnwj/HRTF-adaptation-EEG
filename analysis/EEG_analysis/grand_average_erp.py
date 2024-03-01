@@ -4,11 +4,11 @@ import re
 from pathlib import Path
 from mne import grand_average, read_epochs, write_evokeds
 from mne.channels import make_1020_channel_selections
+from copy import deepcopy
 
 data_dir = Path.cwd() / 'data'
 eeg_dir = data_dir / 'experiment' /'pilot' / 'EEG'
 
-conditions = ['Free Ears', 'Molds']
 
 """
 Compute the grand average evoked response (i.e the average across subjects).
@@ -17,7 +17,9 @@ all conditions and one with the average of each condition.
 """
 
 evoked = []
-evoked_conditions = {"37.5": [], "12.5": [], "-12.5": [], "-37.5": []}
+conditions = ['Free Ears', 'Molds']
+elevation_conditions = {"37.5": [], "12.5": [], "-12.5": [], "-37.5": []}
+evoked_conditions = {'Free Ears': deepcopy(elevation_conditions), 'Molds': deepcopy(elevation_conditions),}
 
 for i_sub, subject_folder in enumerate(eeg_dir.glob('*')):
     for condition in conditions:
@@ -25,21 +27,24 @@ for i_sub, subject_folder in enumerate(eeg_dir.glob('*')):
         if epoch_fpath:
             epochs = mne.read_epochs(fname=epoch_fpath[0])  # take the first element from the list
             evoked.append(epochs.average())  # get evoked response across all conditions
-            for key in evoked_conditions.keys():  # evoked response for each condition
-                evoked_conditions[key].append(epochs[key].average())
+            for key in elevation_conditions.keys():  # evoked response for each condition
+                evoked_conditions[condition][key].append(epochs[key].average())
 
 # compute the grand average
 # across conditions
 evoked = grand_average(evoked)
 # for each condition
-for key in evoked_conditions.keys():
-    evoked_conditions[key] = grand_average(evoked_conditions[key])
-    evoked_conditions[key].comment = key
+for condition in conditions:
+    for key in elevation_conditions.keys():
+        evoked_conditions[condition][key] = grand_average(evoked_conditions[condition][key])
+        evoked_conditions[condition][key].comment = key
+
 evoked_conditions = list(evoked_conditions.values())
 
 # write data
 evoked.save(eeg_dir / 'grand_average-ave.fif', overwrite=True)
-write_evokeds(eeg_dir / 'grand_average_conditions-ave.fif', evoked_conditions, overwrite=True)
+write_evokeds(eeg_dir / 'Free_Ears_grand_average_conditions-ave.fif', list(evoked_conditions[0].values()), overwrite=True)
+write_evokeds(eeg_dir / 'Molds_grand_average_conditions-ave.fif', list(evoked_conditions[1].values()), overwrite=True)
 
 
 # """

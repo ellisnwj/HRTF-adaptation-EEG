@@ -44,11 +44,6 @@ for condition in conditions:
                 raws.append(read_raw_brainvision(header_file))
             raw = mne.concatenate_raws(raws, preload=None, events_list=None, on_mismatch='raise', verbose=None)
 
-            # inspect raw data
-            # raw.plot()
-            # raw.plot_psd(xscale='linear', fmin=0, fmax=40)
-            # raw.compute_psd().plot(average=True)
-
             # assign channel names to the data
             raw.rename_channels(electrode_names)
             raw.set_montage("standard_1020")  # ------ use brainvision montage instead?
@@ -56,40 +51,43 @@ for condition in conditions:
             # montage = mne.channels.read_custom_montage(fname=montage_path)
             # raw.set_montage(montage)
 
-            # get events
-            events = events_from_annotations(raw)[0]
-            events = events[[not e in [99999, 10, 12, 14, 16] for e in events[:, 2]]]
+            # inspect raw data
+            # raw.plot()
+            # fig = raw.plot_psd(xscale='linear', fmin=0, fmax=80)
+            # fig.suptitle(header_file.name)
+            # raw.compute_psd().plot(average=True)
 
             print('STEP 1: Remove power line noise and apply minimum-phase highpass filter')  # Cheveigné, 2020
-            # raw = raw.load_data()  #
+            raw = raw.load_data()
             X = raw.get_data().T
-            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=1)
+            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=20)
 
-            # plot changes made by the filter:
-            # plot before / after zapline denoising
-            # power line noise is not fully removed?
-
-            f, ax = plt.subplots(1, 2, sharey=True)
-            f, Pxx = signal.welch(raw.get_data().T, 500, nperseg=500, axis=0, return_onesided=True)
-            ax[0].semilogy(f, Pxx)
-            f, Pxx = signal.welch(X, 500, nperseg=500, axis=0, return_onesided=True)
-            ax[1].semilogy(f, Pxx)
-            ax[0].set_xlabel("frequency [Hz]")
-            ax[1].set_xlabel("frequency [Hz]")
-            ax[0].set_ylabel("PSD [V**2/Hz]")
-            ax[0].set_title("before")
-            ax[1].set_title("after")
-            plt.show()
+            # # plot changes made by the filter:
+            # # plot before / after zapline denoising
+            # # power line noise is not fully removed with 5 components, remove 10
+            # f, ax = plt.subplots(1, 2, sharey=True)
+            # f, Pxx = signal.welch(raw.get_data().T, 500, nperseg=500, axis=0, return_onesided=True)
+            # ax[0].semilogy(f, Pxx)
+            # f, Pxx = signal.welch(X, 500, nperseg=500, axis=0, return_onesided=True)
+            # ax[1].semilogy(f, Pxx)
+            # ax[0].set_xlabel("frequency [Hz]")
+            # ax[1].set_xlabel("frequency [Hz]")
+            # ax[0].set_ylabel("PSD [V**2/Hz]")
+            # ax[0].set_title("before")
+            # ax[1].set_title("after")
+            # plt.show()
 
             # put the data back into raw
             raw._data = X.T
             del X
 
             # remove line noise (eg. stray electromagnetic signals)
-            raw.load_data()  # load data to filter
             raw = raw.filter(l_freq=1, h_freq=None, phase="minimum")
 
             print('STEP 2: Epoch and downsample the data')
+            # get events
+            events = events_from_annotations(raw)[0]
+            events = events[[not e in [99999, 10, 12, 14, 16] for e in events[:, 2]]]
             # remove all meaningless event codes, including post trial events
             tmin, tmax, event_ids = epoch_parameters  # get epoch parameters
             epochs = Epochs(
@@ -127,7 +125,7 @@ for condition in conditions:
             # component = reference.labels_["blinks"]
             ica = ICA(n_components=0.999, method="fastica")
             ica.fit(epochs)
-            ica.labels_["blinks"] = [0]
+            ica.labels_["blinks"] = [0, 1]
             # corrmap([ica, ica], template=(0, component[0]), label="blinks", plot=False, threshold=0.75)
             # ica.plot_components(picks=range(10))
             # ica.plot_sources(epochs)
@@ -146,6 +144,9 @@ for condition in conditions:
             # compare both of these signals and calculate the error
             # the candidate threshold with the lowest error is the best rejection threshold for a global rejection
 
+            # plot preprocessing results
+            fig = epochs.plot_psd(xscale='linear', fmin=0, fmax=80)
+            fig.suptitle(header_file.name)
 
             #  save peprocessed epochs to file
             epochs.save(outdir / f"{subfolder.name}-epo.fif", overwrite=True)
