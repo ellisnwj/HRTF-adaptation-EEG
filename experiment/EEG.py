@@ -95,10 +95,8 @@ def eeg_test(target_speakers, repetitions, subject_dir):
     return
 
 def play_trial(target_speaker_id):
-
     #todo check elevation with feedback
     test_headpose()
-
     # generate and write probe
     probe = random.choice(probes)
     adapter_l = random.choice(adapters_l)
