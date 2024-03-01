@@ -21,7 +21,7 @@ def localization_test(subject_id, data_dir, condition, repetitions):
     global speakers, stim, sensor, tone, file_name
     if not freefield.PROCESSORS.mode:
         freefield.initialize('dome', default='play_rec', sensor_tracking=True)
-    freefield.load_equalization(Path.cwd() / 'data' / 'calibration' / 'calibration_dome_23.05')
+    freefield.load_equalization(Path.cwd() / 'data' / 'calibration' / 'calibration_dome_01.03.pkl')
 
     # generate stimulus
     bell = slab.Sound.read(Path.cwd() / 'data' / 'sounds' / 'bell.wav')
@@ -31,7 +31,7 @@ def localization_test(subject_id, data_dir, condition, repetitions):
     # read list of speaker locations
     table_file = freefield.DIR / 'data' / 'tables' / Path(f'speakertable_dome.txt')
     speakers = numpy.loadtxt(table_file, skiprows=1, usecols=(0, 3, 4), delimiter=",", dtype=float)
-    c_speakers = numpy.delete(speakers, [23, 4], axis=0)  # remove disconnected speaker from speaker_list
+    c_speakers = numpy.delete(speakers, [23, 19, 27], axis=0)  # remove disconnected speaker from speaker_list
     sequence = numpy.zeros(repetitions * len(c_speakers)).astype('int')
     print('Setting target sequence...')
     while True:  # create n_repetitions sequences with more than 35° angular distance between successive targets
