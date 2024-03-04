@@ -12,9 +12,9 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'Fee'
-condition = 'Ear molds'
-subject_dir = data_dir / 'experiment' / 'pilot' / 'behavior' / 'EEG' / subject_id / condition
+subject_id = 'Test'
+condition = 'Free Ears'
+subject_dir = data_dir / 'experiment' / 'behavior' / 'EEG' / subject_id / condition
 
 repetitions = 60  # number of repetitions per speaker
 n_blocks = 6
@@ -65,14 +65,17 @@ def eeg_test(target_speakers, repetitions, subject_dir):
     freefield.set_signal_and_speaker(tone, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone', n_samples_tag='n_tone')
     buzzer = slab.Sound(data_dir / 'sounds' / 'buzzer.wav')
 
+    # set adapter marker on RX82 to 1
+    freefield.write('adapter marker', value=1, processors='RX82')
+
     input("Press Enter to start.")
-    pose_offset = freefield.get_head_pose('sensor')
     # get reference head pose: make sure participants heads are oriented at the fixation mark!
 
     # create subject folder
     subject_dir.mkdir(parents=True, exist_ok=True)  # create subject RCX_files directory if it doesnt exist
 
     for block in range(n_blocks):
+        pose_offset = freefield.calibrate_sensor(False, False)  # calibrate sensor once at the beginning of each block
         # get trial indices for response trials
         n_trials = int(repetitions * len(target_speakers))
         n_response_trials = int(n_trials * 0.05)
@@ -156,9 +159,8 @@ def play_trial(target_speaker_id):
     return numpy.array((pose, (probe_speaker.azimuth, probe_speaker.elevation)))
 
 def test_headpose():
-    # todo play warning sound if pose not correct and continue with button
     pose = freefield.get_head_pose(method='sensor')
-    while numpy.abs(pose[0]) > 4:
+    while numpy.abs(pose[1]) > 2:
         # play warning sound
         freefield.set_signal_and_speaker(buzzer, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone',
                                          n_samples_tag='n_tone')
