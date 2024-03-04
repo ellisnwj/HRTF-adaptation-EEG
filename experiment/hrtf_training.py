@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import freefield
 import slab
 import numpy
@@ -11,12 +13,12 @@ fs = 48828
 slab.set_default_samplerate(fs)
 
 subject_id = 'Fee'
-subject_dir = data_dir / 'experiment' / 'pilot' / 'behavior' / 'localization' / subject_id / 'Ear molds'
+subject_dir = data_dir / 'experiment' / 'behavior' / 'localization' / subject_id / 'Ear molds'
 try:
     sequence = localization.load_latest(subject_dir)
     target_p = localization.get_target_proabilities(sequence, show=False)
 except:
-    print('Could not load localization final_data. Using equal target probabilities.')
+    print('Could not load localization data. Using equal target probabilities.')
     target_p = None
 
 # max_pulse_interval: maximal pulse interval in ms
@@ -54,7 +56,7 @@ def hrtf_training(max_pulse_interval=500, target_size=3, target_time=0.5, trial_
     goal_attr = {'target_size': target_size, 'target_time': target_time,
                  'game_time': game_time, 'trial_time': trial_time}
     if target_p is None:
-        target_p = numpy.expand_dims(numpy.ones(len(speakers)), axis=1) / len(speakers)
+        target_p = numpy.expand_dims(numpy.ones(len(c_speakers)), axis=1) / len(c_speakers)
     else:
         target_p = numpy.expand_dims(target_p[:, 3], axis=1)
     while True:  # loop over blocks
