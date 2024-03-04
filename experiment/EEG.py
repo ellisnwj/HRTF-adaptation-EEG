@@ -88,17 +88,24 @@ def eeg_test(target_speakers, repetitions, subject_dir):
         # generate random sequence of target speakers
         sequence = slab.Trialsequence(conditions=target_speakers, n_reps=repetitions, kind='non_repeating')
 
+        # save sequence with correct name
+        file_path = subject_dir / str(('eeg' + '_block_%i' + date.strftime('_%d.%m')) % block)
+        counter = 1
+        while Path.exists(file_path):
+            file_path = Path(str(file_path) + '_' + str(counter))
+            counter += 1
+        sequence.save_pickle(file_path, clobber=True)    # save trialsequence
+
         # play trial sequence
         for target_speaker_id in sequence:
             sequence.add_response(play_trial(target_speaker_id))  # play trial
             time.sleep(isi_corrected)  # account for the time it needs to write stimuli to processor buffer (0.195 seconds)
-            sequence.save_pickle(subject_dir / str(('eeg' + '_block_%i' + date.strftime('_%d.%m')) % block),
-                                 clobber=True)    # save trialsequence
+            sequence.save_pickle(file_path, clobber=True)    # save trialsequence
         input("Press Enter to start the next Block.")
     return
 
 def play_trial(target_speaker_id):
-    #todo check elevation with feedback
+
     test_headpose()
     # generate and write probe
     probe = random.choice(probes)
