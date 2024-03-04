@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import freefield
 import slab
 import numpy
@@ -11,9 +13,9 @@ from analysis.plotting.localization_plot import localization_accuracy
 fs = 48828
 slab.set_default_samplerate(fs)
 #test
-subject_id = 'Fee'
-condition = 'Ear molds'
-data_dir = Path.cwd() / 'data' / 'experiment' / 'pilot' / 'behavior' / 'localization' / subject_id / condition
+subject_id = 'Test'
+condition = 'Ears Free'
+data_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization' / subject_id / condition
 
 repetitions = 3  # number of repetitions per speaker
 

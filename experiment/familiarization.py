@@ -13,9 +13,9 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'Fee'
+subject_id = 'Test'
 condition = 'Free Ears'
-subject_dir = data_dir / 'experiment' / 'pilot' / 'behavior' / 'familiarization' / subject_id / condition
+subject_dir = data_dir / 'experiment' / 'behavior' / 'familiarization' / subject_id / condition
 
 
 repetitions = 6  # number of repetitions per speaker
