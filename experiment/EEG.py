@@ -12,8 +12,8 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'Test'
-condition = 'Free Ears'
+subject_id = 'P1'
+condition = 'Ears Free'
 subject_dir = data_dir / 'experiment' / 'behavior' / 'EEG' / subject_id / condition
 
 repetitions = 60  # number of repetitions per speaker
@@ -167,7 +167,7 @@ def play_trial(target_speaker_id):
 
 def test_headpose():
     pose = freefield.get_head_pose(method='sensor')
-    while numpy.abs(pose[1]) > 2:
+    while numpy.abs(pose[1]) > 3:
         # play warning sound
         freefield.set_signal_and_speaker(buzzer, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone',
                                          n_samples_tag='n_tone')
