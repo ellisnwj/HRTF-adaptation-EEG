@@ -11,7 +11,6 @@ from autoreject import Ransac, AutoReject
 from mne.preprocessing import ICA, read_ica, corrmap
 from meegkit.dss import dss_line
 
-
 conditions = ['Free Ears', 'Molds']
 
 data_dir = Path.cwd() / 'data'
@@ -20,8 +19,8 @@ eeg_dir = data_dir / 'experiment' /'pilot' / 'EEG'
 electrode_names = json.load(open(data_dir / 'misc' / "electrode_names.json"))
 # tmin, tmax and event_ids for both experiments
 epoch_parameters = [
-    -0.5,  # t_min
-    2.5,    # t_max
+    -1.5,  # t_min
+    1.5,    # t_max
     {"37.5": 20,  # event ids
     "12.5": 22,
     "-12.5": 24,
@@ -43,6 +42,7 @@ for condition in conditions:
             for header_file in header_files:
                 raws.append(read_raw_brainvision(header_file))
             raw = mne.concatenate_raws(raws, preload=None, events_list=None, on_mismatch='raise', verbose=None)
+            raw = raw.load_data()
 
             # assign channel names to the data
             raw.rename_channels(electrode_names)
@@ -58,9 +58,8 @@ for condition in conditions:
             # raw.compute_psd().plot(average=True)
 
             print('STEP 1: Remove power line noise and apply minimum-phase highpass filter')  # Cheveigné, 2020
-            raw = raw.load_data()
             X = raw.get_data().T
-            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=20)
+            X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=30)
 
             # # plot changes made by the filter:
             # # plot before / after zapline denoising
@@ -82,7 +81,7 @@ for condition in conditions:
             del X
 
             # remove line noise (eg. stray electromagnetic signals)
-            raw = raw.filter(l_freq=1, h_freq=None, phase="minimum")
+            raw = raw.filter(l_freq=.5, h_freq=None, phase="minimum")
 
             print('STEP 2: Epoch and downsample the data')
             # get events
@@ -105,13 +104,17 @@ for condition in conditions:
             raw.crop(0, tmax_noise)
             cov = compute_raw_covariance(raw)  # compute covariance matrix
             cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
-
             del raw
 
+            fs = 100  # resample data to effectively drop frequency components above fs / 3
+            decim = int(epochs.info["sfreq"] / fs)
+            epochs.filter(None, fs / 3, n_jobs=4)
+            epochs.decimate(decim)
+
             print('STEP 4: interpolate bad channels and re-reference to average')  # Bigdely-Shamlo et al., 2015
-            r = Ransac(n_jobs=4)  # ransac identifies bad channels based on correlation
-            epochs = r.fit_transform(epochs)
-            epochs.set_eeg_reference("average")
+            r = Ransac(n_jobs=4, min_corr=0.85)
+            epochs_clean = epochs.copy()
+            epochs_clean = r.fit_transform(epochs_clean)
             del r
             # 1 Interpolate all channels from a subset of channels (fraction denoted as min_channels),
             # repeat n_resample times.
@@ -133,6 +136,11 @@ for condition in conditions:
             ica.save(outdir / f"{subfolder.name}-ica.fif", overwrite=True)
             del ica
 
+            epochs_clean.set_eeg_reference("average", projection=True)
+            epochs.add_proj(epochs_clean.info["projs"][0])
+            epochs.apply_proj()
+            del epochs_clean
+
             print('STEP 6: Reject / repair bad epochs')  # Jas et al., 2017
             # ar = AutoReject(n_interpolate=[0, 1, 2, 4, 8, 16], n_jobs=4)
             ar = AutoReject(n_jobs=4)
@@ -145,7 +153,7 @@ for condition in conditions:
             # the candidate threshold with the lowest error is the best rejection threshold for a global rejection
 
             # plot preprocessing results
-            fig = epochs.plot_psd(xscale='linear', fmin=0, fmax=80)
+            fig = epochs.plot_psd(xscale='linear', fmin=0, fmax=50)
             fig.suptitle(header_file.name)
 
             #  save peprocessed epochs to file
