@@ -47,7 +47,6 @@ write_evokeds(eeg_dir / 'Free_Ears_grand_average_conditions-ave.fif', list(evoke
 write_evokeds(eeg_dir / 'Molds_grand_average_conditions-ave.fif', list(evoked_conditions[1].values()), overwrite=True)
 
 
-# """
 # group average epochs
 # """
 #
