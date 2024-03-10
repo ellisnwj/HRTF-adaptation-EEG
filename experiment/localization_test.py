@@ -13,8 +13,8 @@ from analysis.plotting.localization_plot import localization_accuracy
 fs = 48828
 slab.set_default_samplerate(fs)
 #test
-subject_id = 'Test'
-condition = 'Ears Free'
+subject_id = 'P1'
+condition = 'Molds'
 data_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization' / subject_id / condition
 
 repetitions = 3  # number of repetitions per speaker
@@ -24,6 +24,7 @@ def localization_test(subject_id, data_dir, condition, repetitions):
     if not freefield.PROCESSORS.mode:
         freefield.initialize('dome', default='play_rec', sensor_tracking=True)
     freefield.load_equalization(Path.cwd() / 'data' / 'calibration' / 'calibration_dome_01.03.pkl')
+    freefield.set_logger('warning')
 
     # generate stimulus
     bell = slab.Sound.read(Path.cwd() / 'data' / 'sounds' / 'bell.wav')

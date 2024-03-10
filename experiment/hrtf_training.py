@@ -12,8 +12,8 @@ data_dir = Path.cwd() / 'data'
 fs = 48828
 slab.set_default_samplerate(fs)
 
-subject_id = 'Fee'
-subject_dir = data_dir / 'experiment' / 'behavior' / 'localization' / subject_id / 'Ear molds'
+subject_id = 'P1'
+subject_dir = data_dir / 'experiment' / 'behavior' / 'localization' / subject_id / 'Molds'
 try:
     sequence = localization.load_latest(subject_dir)
     target_p = localization.get_target_proabilities(sequence, show=False)

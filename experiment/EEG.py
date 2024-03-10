@@ -13,7 +13,7 @@ data_dir = Path.cwd() / 'data'
 
 # initial test
 subject_id = 'P1'
-condition = 'Ears Free'
+condition = 'Molds'
 subject_dir = data_dir / 'experiment' / 'behavior' / 'EEG' / subject_id / condition
 
 repetitions = 60  # number of repetitions per speaker
