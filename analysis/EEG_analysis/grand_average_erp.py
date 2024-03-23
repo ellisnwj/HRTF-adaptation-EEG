@@ -7,7 +7,7 @@ from mne.channels import make_1020_channel_selections
 from copy import deepcopy
 
 data_dir = Path.cwd() / 'data'
-eeg_dir = data_dir / 'experiment' /'pilot' / 'EEG'
+eeg_dir = data_dir / 'experiment' / 'EEG'
 
 
 """
@@ -17,22 +17,23 @@ all conditions and one with the average of each condition.
 """
 
 evoked = []
-conditions = ['Free Ears', 'Molds']
+conditions = ['Ears Free', 'Molds 1', 'Molds 2']
 elevation_conditions = {"37.5": [], "12.5": [], "-12.5": [], "-37.5": []}
-evoked_conditions = {'Free Ears': deepcopy(elevation_conditions), 'Molds': deepcopy(elevation_conditions),}
+evoked_conditions = {'Ears Free': deepcopy(elevation_conditions), 'Molds 1': deepcopy(elevation_conditions),
+                     'Molds 2': deepcopy(elevation_conditions),}
 
-for i_sub, subject_folder in enumerate(eeg_dir.glob('*')):
-    for condition in conditions:
+for condition in conditions:  # iterate over ear conditions
+    for i_sub, subject_folder in enumerate(eeg_dir.glob('*P1')):
         epoch_fpath = list((subject_folder / condition / 'preprocessed').glob('*epo.fif'))
         if epoch_fpath:
             epochs = mne.read_epochs(fname=epoch_fpath[0])  # take the first element from the list
             evoked.append(epochs.average())  # get evoked response across all conditions
-            for key in elevation_conditions.keys():  # evoked response for each condition
+            for key in elevation_conditions.keys():  # evoked response for each elevation condition
                 evoked_conditions[condition][key].append(epochs[key].average())
 
 # compute the grand average
 # across conditions
-evoked = grand_average(evoked)
+# evoked = grand_average(evoked)
 # for each condition
 for condition in conditions:
     for key in elevation_conditions.keys():
@@ -42,9 +43,10 @@ for condition in conditions:
 evoked_conditions = list(evoked_conditions.values())
 
 # write data
-evoked.save(eeg_dir / 'grand_average-ave.fif', overwrite=True)
-write_evokeds(eeg_dir / 'Free_Ears_grand_average_conditions-ave.fif', list(evoked_conditions[0].values()), overwrite=True)
+# evoked.save(eeg_dir / 'grand_average-ave.fif', overwrite=True)
+write_evokeds(eeg_dir / 'Ears_Free_grand_average_conditions-ave.fif', list(evoked_conditions[0].values()), overwrite=True)
 write_evokeds(eeg_dir / 'Molds_grand_average_conditions-ave.fif', list(evoked_conditions[1].values()), overwrite=True)
+write_evokeds(eeg_dir / 'Molds_2_grand_average_conditions-ave.fif', list(evoked_conditions[2].values()), overwrite=True)
 
 
 # group average epochs

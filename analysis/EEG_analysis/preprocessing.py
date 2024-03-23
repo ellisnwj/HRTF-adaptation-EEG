@@ -11,10 +11,12 @@ from autoreject import Ransac, AutoReject
 from mne.preprocessing import ICA, read_ica, corrmap
 from meegkit.dss import dss_line
 
-conditions = ['Free Ears', 'Molds']
+subject_id = 'P2'
+
+conditions = ['Ears Free', 'Molds 1', 'Molds 2']
 
 data_dir = Path.cwd() / 'data'
-eeg_dir = data_dir / 'experiment' /'pilot' / 'EEG'
+eeg_dir = data_dir / 'experiment' / 'EEG'
 
 electrode_names = json.load(open(data_dir / 'misc' / "electrode_names.json"))
 # tmin, tmax and event_ids for both experiments
@@ -29,10 +31,10 @@ epoch_parameters = [
 # get subject files
 for condition in conditions:
     for subfolder in eeg_dir.glob('*'):
-        print(subfolder)
         # concatenate raw eeg data across blocks
-        if (subfolder / condition).exists():
+        if ((subfolder / condition).exists()) and (subfolder.name == subject_id):
             outdir = subfolder / condition / 'preprocessed' # create output directory
+            # subject_id = subfolder.name
             if not outdir.exists():
                 outdir.mkdir()
             # collect header files
@@ -41,6 +43,7 @@ for condition in conditions:
             # concatenate blocks
             for header_file in header_files:
                 raws.append(read_raw_brainvision(header_file))
+            print(raws)
             raw = mne.concatenate_raws(raws, preload=None, events_list=None, on_mismatch='raise', verbose=None)
             raw = raw.load_data()
 
@@ -53,17 +56,17 @@ for condition in conditions:
 
             # inspect raw data
             # raw.plot()
-            # fig = raw.plot_psd(xscale='linear', fmin=0, fmax=80)
-            # fig.suptitle(header_file.name)
             # raw.compute_psd().plot(average=True)
+            # fig = raw.plot_psd(xscale='linear', fmin=0, fmax=250)
+            # fig.suptitle(header_file.name)
 
             print('STEP 1: Remove power line noise and apply minimum-phase highpass filter')  # Cheveigné, 2020
             X = raw.get_data().T
             X, _ = dss_line(X, fline=50, sfreq=raw.info["sfreq"], nremove=30)
 
-            # # plot changes made by the filter:
-            # # plot before / after zapline denoising
-            # # power line noise is not fully removed with 5 components, remove 10
+            # plot changes made by the filter:
+            # plot before / after zapline denoising
+            # power line noise is not fully removed with 5 components, remove 10
             # f, ax = plt.subplots(1, 2, sharey=True)
             # f, Pxx = signal.welch(raw.get_data().T, 500, nperseg=500, axis=0, return_onesided=True)
             # ax[0].semilogy(f, Pxx)
@@ -98,18 +101,21 @@ for condition in conditions:
                 baseline=None,
                 preload=True,
             )
-
-            # extra: use raw data to compute the noise covariance  # for later analysis?
-            tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]  # cut raw data before first stimulus
-            raw.crop(0, tmax_noise)
-            cov = compute_raw_covariance(raw)  # compute covariance matrix
-            cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
-            del raw
-
-            fs = 100  # resample data to effectively drop frequency components above fs / 3
-            decim = int(epochs.info["sfreq"] / fs)
-            epochs.filter(None, fs / 3, n_jobs=4)
+            decim = int(epochs.info["sfreq"] / 100)
+            epochs.filter(None, 100 / 3, n_jobs=4)
             epochs.decimate(decim)
+
+            # # extra: use raw data to compute the noise covariance  # for later analysis?
+            # tmax_noise = (events[0, 0] - 1) / raw.info["sfreq"]  # cut raw data before first stimulus
+            # raw.crop(0, tmax_noise)
+            # cov = compute_raw_covariance(raw)  # compute covariance matrix
+            # cov.save(outdir / f"{subfolder.name}_noise-cov.fif", overwrite=True)  # save to file
+            # del raw
+            #
+            # fs = 100  # resample data to effectively drop frequency components above fs / 3
+            # decim = int(epochs.info["sfreq"] / fs)
+            # epochs.filter(None, fs / 3, n_jobs=4)
+            # epochs.decimate(decim)
 
             print('STEP 4: interpolate bad channels and re-reference to average')  # Bigdely-Shamlo et al., 2015
             r = Ransac(n_jobs=4, min_corr=0.85)
@@ -128,12 +134,12 @@ for condition in conditions:
             # component = reference.labels_["blinks"]
             ica = ICA(n_components=0.999, method="fastica")
             ica.fit(epochs)
-            ica.labels_["blinks"] = [0, 1]
             # corrmap([ica, ica], template=(0, component[0]), label="blinks", plot=False, threshold=0.75)
-            # ica.plot_components(picks=range(10))
+            ica.plot_components(picks=range(10))
             # ica.plot_sources(epochs)
+            ica.labels_["blinks"] = [0, 2]
             ica.apply(epochs, exclude=ica.labels_["blinks"])
-            ica.save(outdir / f"{subfolder.name}-ica.fif", overwrite=True)
+            ica.save(outdir / f"{subfolder.name}_{condition}-ica.fif", overwrite=True)
             del ica
 
             epochs_clean.set_eeg_reference("average", projection=True)
@@ -143,7 +149,7 @@ for condition in conditions:
 
             print('STEP 6: Reject / repair bad epochs')  # Jas et al., 2017
             # ar = AutoReject(n_interpolate=[0, 1, 2, 4, 8, 16], n_jobs=4)
-            ar = AutoReject(n_jobs=4)
+            ar = AutoReject(n_jobs=20)
             epochs = ar.fit_transform(epochs)  # Bigdely-Shamlo et al., 2015)?
             # apply threshold \tau_i to reject trials in the train set
             # calculate the mean of the signal( for each sensor and timepoint) over the GOOD (= not rejected)
@@ -157,5 +163,5 @@ for condition in conditions:
             fig.suptitle(header_file.name)
 
             #  save peprocessed epochs to file
-            epochs.save(outdir / f"{subfolder.name}-epo.fif", overwrite=True)
-            ar.save(outdir / f"{subfolder.name}-autoreject.h5", overwrite=True)
+            epochs.save(outdir / f"{subject_id}_{condition}-epo.fif", overwrite=True)
+            ar.save(outdir / f"{subject_id}_{condition}-autoreject.h5", overwrite=True)

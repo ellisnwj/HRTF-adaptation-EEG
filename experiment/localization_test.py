@@ -14,7 +14,7 @@ fs = 48828
 slab.set_default_samplerate(fs)
 #test
 subject_id = 'P1'
-condition = 'Molds'
+condition = 'Molds 1'
 data_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization' / subject_id / condition
 
 repetitions = 3  # number of repetitions per speaker
