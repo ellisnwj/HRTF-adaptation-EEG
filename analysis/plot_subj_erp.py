@@ -1,4 +1,5 @@
 import mne
+import numpy
 from pathlib import Path
 from copy import deepcopy
 from matplotlib import pyplot as plt
@@ -30,10 +31,11 @@ for condition in conditions:  # iterate over ear conditions
 n_subj = len(list(eeg_dir.glob('*P?')))
 colors = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red']
 times = epochs.times
+# times = numpy.linspace(-1.5, 1.5, 3*500+1)
 tmin = -1.1
 tmax = 1.0
 
-fig, axis = plt.subplots(3,n_subj, figsize=(21,8), tight_layout=True, sharex=True)
+fig, axis = plt.subplots(3, n_subj, figsize=(21,8), tight_layout=True, sharex=True)
 
 # plot
 for condition_idx, condition in enumerate(conditions):
