@@ -8,9 +8,11 @@ from sklearn.linear_model import LogisticRegression
 from mne import read_epochs, concatenate_epochs
 from mne.decoding import SlidingEstimator, cross_val_multiscore
 
-root = Path(__file__).parent.parent.absolute()
-p = json.load(open(root / "code" / "parameters.json"))
-for sub in (root / "data" / "epochs").glob("sub*"):
+eeg_dir = Path.cwd() / 'data' / 'experiment' / 'EEG'
+
+# p = json.load(open(root / "code" / "parameters.json"))
+for sub in eeg_dir.glob("P?*"):
+    print(sub)
     for i_ses, ses in enumerate(sub.glob("ses*")):
         epochs = concatenate_epochs([read_epochs(e) for e in ses.glob("*-epo.fif")])
 
