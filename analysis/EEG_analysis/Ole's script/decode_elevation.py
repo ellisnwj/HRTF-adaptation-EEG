@@ -14,7 +14,8 @@ eeg_dir = Path.cwd() / 'data' / 'experiment' / 'EEG'
 for sub in eeg_dir.glob("P?*"):
     print(sub)
     for i_ses, ses in enumerate(sub.glob("ses*")):
-        epochs = concatenate_epochs([read_epochs(e) for e in ses.glob("*-epo.fif")])
+        print(ses)
+        epochs = [read_epochs(e) for e in ses.glob("*-epo.fif")][0]
 
         events, event_id = epochs.events, epochs.event_id
         n_times = len(epochs.times)
@@ -34,10 +35,10 @@ for sub in eeg_dir.glob("P?*"):
                 StandardScaler(), LogisticRegression(solver="lbfgs", max_iter=1000)
             )
             decoder = SlidingEstimator(clf, scoring="roc_auc", verbose=True, n_jobs=4)
-            scores = cross_val_multiscore(decoder, X, y, cv=p["cv_folds"])
+            scores = cross_val_multiscore(decoder, X, y, cv=p["cv_folds"])      #create a parameters list
             results[f"{con1} vs {con2}"] = scores.mean(axis=0)
             np.save(
-                root
+                eeg_dir
                 / "results"
                 / "decoding"
                 / f"{sub.name}_{ses.name}_decoding_score.npy",
