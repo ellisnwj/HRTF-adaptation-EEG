@@ -1,3 +1,4 @@
+
 from pathlib import Path
 import numpy as np
 import scipy
@@ -7,48 +8,45 @@ import pandas as pd
 import slab
 import os
 from analysis.plotting.localization_plot import localization_accuracy as la
-import analysis.localization_analysis as loc_analysis
+pd.set_option('display.max_rows', 1000, 'display.max_columns', 200, 'display.width', 99999)
 
 
-eeg_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'preprocessed'
+
+eeg_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'decoding'
 beh_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization'
 
-
-def get_df():    # beh and eeg path
-
-    columns = ['EG EF', 'EG M1 D1', 'EG M1 D2', 'EG M1 D3',
-               'EG M1 D4', 'EG M1 D5', 'EG M1 D6', 'EG M1 D7']
-    index_ = ['P1', 'P2', 'P3', 'P4', 'P5']
-    seq_df = pd.DataFrame(columns=columns, index=index_)
-    print(seq_df)
-
-
+def get_beh_df():
+    columns = ['Subject', 'EF', 'M1 D1', 'M1 D2', 'M1 D3',
+               'M1 D4', 'M1 D5', 'M1 D6', 'M1 D7']
+    seq_df = pd.DataFrame(columns=columns)
     for sub in beh_dir.glob("P?*"):
-        print(sub)
-        for ses in enumerate(sub.glob("ses*")):
-            print(ses)
-            for filename in ses.glob('*'):
-                print(ses)
-                trial_seq =
-                elevation_gain =
-                ele_rmse =
-                ele_sd =
-                session = ses.name
-                new_row = {'sessions': session}
-                print(ses)
-            # todo create a new row
-                seq_df = seq_df._append(new_row, ignore_index = True)
-                (list(loc_analysis.localization_accuracy(sequence, show=False)))
+        subject_data = []
+        for filename in sub.glob('localization*'):
+            trial_seq = slab.Trialsequence(filename) # get trial sequence
+            elevation_gain, ele_rmse, ele_sd, az_rmse, az_sd = la(trial_seq, show=False) # get behavior data
+            subject_data.append([elevation_gain, ele_rmse, ele_sd])  # append behavior data of a single subject to a list
+        subject_row = {'Subject': sub.name, 'EF': subject_data[0], 'M1 D1': subject_data[1], 'M1 D2': subject_data[2],
+                       'M1 D3': subject_data[3], 'M1 D4': subject_data[4], 'M1 D5': subject_data[5],
+                       'M1 D6': subject_data[6], 'M1 D7': subject_data[7]}  # create new row
+        seq_df = seq_df._append(subject_row, ignore_index = True)  # append row to df
+    return seq_df
+
+def get_eeg_df():
+    columns = ['Subject', 'EF', 'M1 D1', 'M1 D7']
+    eeg_df = pd.DataFrame(columns=columns)
+    for sub in eeg_dir.glob("P?*"):
+        subject_data = []
+        for filename in sub.glob('*'):
+            decoding_dict = np.load(filename, allow_pickle=True)
+            subject_data.append(decoding_dict)  # append eeg data of a single subject to a list
+        subject_row = {'Subject': sub.name, 'EF': subject_data[0], 'M1 D1': subject_data[1],
+                       'M1 D7': subject_data[2]}  # create new row
+        eeg_df = eeg_df._append(subject_row, ignore_index=True)  # append row to df
 
 
-            print(ses)
-            sequence = slab.Trialsequence().load_pickle(list(ses.glob('*'))[0])
-            elevation_gain, ele_rmse, ele_sd, az_rmse, az_sd = la(sequence, show=False)
-            # todo write into that row the sequence
 
 
-df = pd.DataFrame()
-df.columns
+
 
 
 # paired t-test
