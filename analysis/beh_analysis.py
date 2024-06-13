@@ -11,7 +11,6 @@ from analysis.plotting.localization_plot import localization_accuracy as la
 pd.set_option('display.max_rows', 1000, 'display.max_columns', 200, 'display.width', 99999)
 
 
-
 eeg_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'decoding'
 beh_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization'
 
@@ -42,7 +41,7 @@ def get_eeg_df():
         subject_row = {'Subject': sub.name, 'EF': subject_data[0], 'M1 D1': subject_data[1],
                        'M1 D7': subject_data[2]}  # create new row
         eeg_df = eeg_df._append(subject_row, ignore_index=True)  # append row to df
-
+    return eeg_df
 
 
 
@@ -63,3 +62,4 @@ scipy.stats.ttest_rel(con1, con2, axis=0, nan_policy='propagate', alternative='t
 # new_row = {'subject': subject_id}
 # subject_id = pd.DataFrame({'subject': ['P1', 'P2', 'P3', 'P4', 'P5']})
 # seq_df['subject'] = subject_id
+
