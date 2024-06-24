@@ -1,6 +1,6 @@
 /data/experiment/EEG/
 /data/experiment/pilot/EEG/
-/data/experiment/results/preprocessed/
+/data/experiment/results/
 
 # temporary files which can be created if a process still has a handle open of a deleted file
 /.metawear/
