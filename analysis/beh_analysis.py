@@ -1,4 +1,4 @@
-import seaborn
+import seaborn as sns
 from matplotlib import pyplot as plt
 from pathlib import Path
 import numpy as np
@@ -7,7 +7,7 @@ from scipy import stats
 from mne import read_epochs
 import pandas as pd
 import slab
-import os
+import seaborn.objects as so
 from analysis.plotting.localization_plot import localization_accuracy as la
 pd.set_option('display.max_rows', 1000, 'display.max_columns', 200, 'display.width', 99999)
 
@@ -68,50 +68,32 @@ for index, row in df.iterrows():
     results.append(result)
     # list of tuples to dataframe
     df_ele = pd.DataFrame(results)
+    # calculating mean
+    m1 = df_ele[1].mean()
+    m2 = df_ele[2].mean()
+    m3 = df_ele[3].mean()
+    m4 = df_ele[4].mean()
+    m5 = df_ele[5].mean()
+    m6 = df_ele[6].mean()
+    m7 = df_ele[7].mean()
+    means = [m1, m2, m3, m4, m5, m6, m7]
+    days = [1, 2, 3, 4, 5, 6, 7]
+    list_of_tuples = list(zip(means, days))
+    dfm = pd.DataFrame(list_of_tuples, columns=['means', 'days'])
+
     # wide to long format pandas data frame
     dfr = df_ele.reset_index()
-    dfr = pd.melt(dfr, id_vars=[0], value_vars=[1, 2, 3, 4, 5, 6])
+    dfr = pd.melt(dfr, id_vars=[0], value_vars=[1, 2, 3, 4, 5, 6, 7])
     dfr.columns = ['Subject', 'day', 'elevation gain']
 
+
 # Seaborn to plot data
-seaborn.set(style='whitegrid')
-seaborn.scatterplot(data=dfr, x='day', y='elevation gain', hue='Subject')
+sns.set(style='whitegrid')
+sns.scatterplot(data=dfr, x='day', y='elevation gain', hue='Subject')
 
-
-
-# my tryouts
-def extract_values(dictionary):
-    ele_gain = dictionary[0]
-    return ele_gain
-
-seq_df[['elevation_gain1']] = seq_df['EF'].apply(lambda x: pd.Series(extract_values(x)))
-seq_df[['elevation_gain2']] = seq_df['M1 D1'].apply(lambda x: pd.Series(extract_values(x)))
-print(seq_df)
-
-# taking column and make means of ele gain, then plot the mean ele gain against days
-# or plot target ele against perceived ele (aka Pauls script)
-
-plt.plot(elevation_gain1, elevation_gain2)
-pd.DataFrame.plot(seq_df['elevation_gain1'])
+# add trend line
+plt.plot(days, means, '-kx')
 plt.show()
-seq_df.elevation_gain1.shape
-seq_df.elevation_gain1[0][4]
-plt.plot(seq_df.elevation_gain1)
-mean = numpy.mean(seq_df.elevation_gain1, axis = 0)
-mean.shape
-plt.figure()
-plt.plot(x, mean)
-
-
-my_dict = {'EF': subject_data[0], 'M1 D1': subject_data[1]}
-
-names = list(my_dict.keys())
-values = list(my_dict.values())
-
-plt.bar(range(len(my_dict)), values, tick_label=names)
-plt.show()
-
-print(seq_df)
 
 
 
