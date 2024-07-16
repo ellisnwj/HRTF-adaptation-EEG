@@ -7,7 +7,7 @@ from scipy import stats
 from mne import read_epochs
 import pandas as pd
 import slab
-import seaborn.objects as so
+import pathlib
 from analysis.plotting.localization_plot import localization_accuracy as la
 pd.set_option('display.max_rows', 1000, 'display.max_columns', 200, 'display.width', 99999)
 
@@ -23,29 +23,83 @@ def get_beh_df():
         subject_data = []
         for filename in sub.glob('localization*'):
             trial_seq = slab.Trialsequence(filename) # get trial sequence
+            print(filename)
             elevation_gain, ele_rmse, ele_sd, az_rmse, az_sd = la(trial_seq, show=False) # get behavior data
             subject_data.append([elevation_gain, ele_rmse, ele_sd])  # append behavior data of a single subject to a list
         subject_row1 = {'Subject': sub.name, 'EF': subject_data[0], 'M1 D1': subject_data[1], 'M1 D2': subject_data[2],
                        'M1 D3': subject_data[3], 'M1 D4': subject_data[4], 'M1 D5': subject_data[5],
                        'M1 D6': subject_data[6]}  # create new row
-        seq_df = seq_df._append(subject_row1, ignore_index = True)  # append row to df
+        seq_df = seq_df._append(subject_row1, ignore_index=True)  # append row to df
     return seq_df
 
-def get_eeg_df():
-    columns = ['Subject', 'EF', 'M1 D1', 'M1 D7']
-    eeg_df = pd.DataFrame(columns=columns)
-    for sub in eeg_dir.glob("P?*"):
-        subject_data = []
-        for filename in sub.glob('*'):
-            decoding_dict = np.load(filename, allow_pickle=True)
-            subject_data.append(decoding_dict)  # append eeg data of a single subject to a list
-        subject_row2 = {'Subject': sub.name, 'EF': subject_data[0], 'M1 D1': subject_data[1],
-                       'M1 D7': subject_data[2]}  # create new row
-        eeg_df = eeg_df._append(subject_row2, ignore_index=True)  # append row to df
-    return eeg_df
+# plotting perceived and targeted elevation
 
-# plotting
+dfe = pd.DataFrame(columns=[ 'Subject', 'targets', 'responses', 'session'])
+for sub in beh_dir.glob("P?*"):
+    print(sub)
+    # beh_data = []
+    for i_ses, ses in enumerate(sub.glob("session3")):
+        for filename in ses.glob('localization*'):
+            trial_seq = slab.Trialsequence(filename)
+            print(trial_seq)
 
+            loc_data = np.asarray(trial_seq.data)
+            loc_data = loc_data.reshape(loc_data.shape[0], 2, 2)
+            targets = loc_data[:, 1]  # [az, ele]
+            responses = loc_data[:, 0]
+            elevations = np.unique(loc_data[:, 1, 1])
+            azimuths = np.unique(loc_data[:, 1, 0])
+            targets[:, 1] = loc_data[:, 1, 1]  # target elevations
+            responses[:, 1] = loc_data[:, 0, 1]  # perceived elevations
+            targets = list(targets[:, 1])
+            responses = list(responses[:, 1])
+            subject_row2 = {'Subject': sub.name, 'targets': targets, 'responses': responses, "session": ses.name}
+            dfe = dfe._append(subject_row2, ignore_index=True)
+
+
+
+# plot
+# Convert array to list
+target_array = dfe['targets']
+# Convert NumPy array to list using a loop
+list_conv = []
+for item in target_array:
+    list_conv.append(item)
+
+response_array = dfe['responses']
+# Convert NumPy array to list using a loop
+list_conv = []
+for target, response in target_array, response_array:
+    list_conv.append(target, response)
+
+df_ele = pd.DataFrame(list_conv)
+
+list_points = []
+for index, row in dfe.iterrows():
+    df_e = row
+    subj = row['Subject']
+    targets = row['targets']
+    responses = row['responses']
+    session = row['session']
+    results = (subj, targets, responses, session)
+    list_points.append(results)
+
+# array to list
+df_e = dfe.explode('targets', ignore_index=True)
+df_e['responses'] = np.tile(responses, len(dfe))
+df_e['targets'] = df_e['targets'].astype(float)
+
+# plot
+sns.set(style='whitegrid')
+sns.scatterplot(data=df_e, x='targets', y='responses', hue='Subject')
+
+# add trend line
+sns.relplot(data=df_e, x='targets', y='responses', kind='line')
+sns.lmplot(data=df_e, x='targets', y='responses', scatter=None, line_kws={'color': 'orange'})
+g = sns.lmplot(x='targets', y='responses', data=df_e, scatter=None)
+
+
+# plotting learning curve
 
 # extracting data from dataframe
 df = seq_df
@@ -94,20 +148,3 @@ sns.scatterplot(data=dfr, x='day', y='elevation gain', hue='Subject')
 # add trend line
 plt.plot(days, means, '-kx')
 plt.show()
-
-
-
-# paired t-test
-# scipy.stats.ttest_rel(con1, con2, axis=0, nan_policy='propagate', alternative='two-sided', *, keepdims=False)
-
-
-# 'M1 D7': subject_data[7]
-# tryouts:
-# dict = [{'subject': '', 'EG EF': '', 'EG M1 D1': [3], 'EG M1 D2': [4], 'EG M1 D3': [5], 'EG M1 D4': [6], 'EG M1 D5': [7], 'EG M1 D6': [8], 'EG M1 D7': [9] }]
-# seq_df = pd.DataFrame(dict)
-# subject_id = {'subject': ['P1', 'P2', 'P3', 'P4', 'P5']}
-# seq_df['subject'] = seq_df['subject'].fill(subject_id)
-# seq_df.loc[:]['subject'] = 'P1'
-# new_row = {'subject': subject_id}
-# subject_id = pd.DataFrame({'subject': ['P1', 'P2', 'P3', 'P4', 'P5']})
-# seq_df['subject'] = subject_id
