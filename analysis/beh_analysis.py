@@ -8,12 +8,14 @@ from mne import read_epochs
 import pandas as pd
 import slab
 import pathlib
+import pickle
 from analysis.plotting.localization_plot import localization_accuracy as la
 pd.set_option('display.max_rows', 1000, 'display.max_columns', 200, 'display.width', 99999)
 
 
 eeg_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'decoding'
 beh_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization'
+results_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'decoding'
 
 def get_beh_df():
     columns = ['Subject', 'EF', 'M1 D1', 'M1 D2', 'M1 D3',
@@ -143,8 +145,32 @@ for index, row in df.iterrows():
 
 # Seaborn to plot data
 sns.set(style='whitegrid')
-sns.scatterplot(data=dfr, x='day', y='elevation gain', hue='Subject')
+# sns.scatterplot(data=dfr, x='day', y='elevation gain', hue='Subject')
+sns.lineplot(data=dfr, x='day', y='elevation gain', dashes=False, hue='Subject', style='Subject', markers=["o", "o"])
 
 # add trend line
 plt.plot(days, means, '-kx')
 plt.show()
+
+
+
+def get_eeg_df():
+    columns = ['Subject', 'EF', 'M1 D1', 'M1 D7']
+    eeg_df = pd.DataFrame(columns=columns)
+    for sub in eeg_dir.glob("P?*"):
+        subject_data = []
+        for filename in sub.glob('*'):
+            decoding_dict = np.load(filename, allow_pickle=True)
+            mean = np.mean()
+            subject_data.append(decoding_dict)  # append eeg data of a single subject to a list
+        subject_row2 = {'Subject': sub.name, 'EF': subject_data[0], 'M1 D1': subject_data[1],
+                       'M1 D7': subject_data[2]}  # create new row
+        eeg_df = eeg_df._append(subject_row2, ignore_index=True)  # append row to df
+    return eeg_df
+
+# separate conditions
+
+# load pkl file
+with open(results_dir / f"{sub.name}_scores.pkl","rb") as x:
+    dict = pickle.load(x)
+
