@@ -15,7 +15,7 @@ pd.set_option('display.max_rows', 1000, 'display.max_columns', 200, 'display.wid
 
 eeg_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'decoding'
 beh_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization'
-results_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'decoding'
+results_dir = Path.cwd() / 'data' / 'experiment' / 'results' / 'decoding' / 'dec'
 
 def get_beh_df():
     columns = ['Subject', 'EF', 'M1 D1', 'M1 D2', 'M1 D3',
@@ -154,23 +154,52 @@ plt.show()
 
 
 
+# df for eeg data
 def get_eeg_df():
-    columns = ['Subject', 'EF', 'M1 D1', 'M1 D7']
-    eeg_df = pd.DataFrame(columns=columns)
-    for sub in eeg_dir.glob("P?*"):
+    columns_eeg = ['Subject', 'session1', 'session2', 'session3']
+    eeg_df = pd.DataFrame(columns=columns_eeg)
+    for sub in results_dir.glob("P?*"):
         subject_data = []
-        for filename in sub.glob('*'):
-            decoding_dict = np.load(filename, allow_pickle=True)
-            mean = np.mean()
-            subject_data.append(decoding_dict)  # append eeg data of a single subject to a list
-        subject_row2 = {'Subject': sub.name, 'EF': subject_data[0], 'M1 D1': subject_data[1],
-                       'M1 D7': subject_data[2]}  # create new row
-        eeg_df = eeg_df._append(subject_row2, ignore_index=True)  # append row to df
+        with open(results_dir / f"{sub.name}","rb") as x:
+            dict = pickle.load(x)
+            dict['Subject'] = sub.name[1]
+            subject_data.append(dict)   # append eeg data of a single subject to a list
+            new_row = {'Subject': sub.name[1], 'session1': dict['session1'],
+                       'session2': dict['session2'], 'session3': dict['session3']} # create new row
+        eeg_df = eeg_df._append(new_row, ignore_index=True)  # append row to df
     return eeg_df
 
-# separate conditions
 
-# load pkl file
-with open(results_dir / f"{sub.name}_scores.pkl","rb") as x:
-    dict = pickle.load(x)
+
+# df for three EGs
+columns = ['Subject', 'session1', 'session2', 'session3']
+    seq_df = pd.DataFrame(columns=columns)
+    for sub in beh_dir.glob("P?*"):
+        EG_data = []
+        for filename in sub.glob('localization*'):
+            trial_seq = slab.Trialsequence(filename) # get trial sequence
+            print(filename)
+            elevation_gain = la(trial_seq, show=False)[0] # get behavior data
+            EG_data.append(elevation_gain)  # append behavior data of a single subject to a list
+        subject_row1 = {'Subject': sub.name, 'session1': EG_data[0], 'session2': EG_data[1],
+                        'session3': EG_data[6]}  # create new row
+        seq_df = seq_df._append(subject_row1, ignore_index=True)
+
+
+# plot da and eg
+eg = seq_df['session1']
+da = eeg_df['session1']
+
+plt.scatter(eg, da)
+plt.xlabel('Elevation gain')
+plt.ylabel('Decoding accuracy')
+
+# regression line
+scipy.stats.linregress(eg, da)
+reg_results = scipy.stats.linregress(eg, da)
+slope = reg_results[0]
+intercept = reg_results[1]
+x = np.linspace(eg.min(), eg.max(), 2)
+y = slope * x + intercept
+plt.plot(x,y)
 
