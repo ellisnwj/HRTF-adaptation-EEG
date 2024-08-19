@@ -12,12 +12,12 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'P1'
-condition = 'Molds'
-subject_dir = data_dir / 'experiment' / 'behavior' / 'EEG' / subject_id / condition
+subject_id = 'test'
+condition = 'Free Ears'
+subject_dir = data_dir / 'experiment_2' / subject_id / condition
 
 repetitions = 60  # number of repetitions per speaker
-n_blocks = 6
+n_blocks = 4
 target_speakers = (20, 22, 24, 26)
 probe_level = 75
 adapter_levels = (44, 49)  # calibrated adapter levels, left first
@@ -102,6 +102,7 @@ def eeg_test(target_speakers, repetitions, subject_dir):
             time.sleep(isi_corrected)  # account for the time it needs to write stimuli to processor buffer (0.195 seconds)
             sequence.save_pickle(file_path, clobber=True)    # save trialsequence
         input("Press Enter to start the next Block.")
+    freefield.halt()
     return
 
 def play_trial(target_speaker_id):

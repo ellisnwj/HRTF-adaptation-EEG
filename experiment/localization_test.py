@@ -12,10 +12,9 @@ from analysis.plotting.localization_plot import localization_accuracy
 
 fs = 48828
 slab.set_default_samplerate(fs)
-#test
-subject_id = 'P1'
-condition = 'Molds 1'
-data_dir = Path.cwd() / 'data' / 'experiment' / 'behavior' / 'localization' / subject_id / condition
+subject_id = 'test'
+condition = 'Free Ears'
+data_dir = Path.cwd() / 'data' / 'experiment_2' / subject_id / condition
 
 repetitions = 3  # number of repetitions per speaker
 
@@ -72,8 +71,8 @@ def localization_test(subject_id, data_dir, condition, repetitions):
             played_bell = True
         trial_sequence.add_response(play_trial(sequence[index], progress))
         trial_sequence.save_pickle(data_dir / file_name, clobber=True)
-    # freefield.halt()
-    print('localization ole_test completed!')
+    freefield.halt()
+    print('localization test completed!')
     return trial_sequence
 
 def play_trial(speaker_id, progress):
