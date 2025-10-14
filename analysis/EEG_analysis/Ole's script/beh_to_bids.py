@@ -20,7 +20,7 @@ beh_dict = {
 # get behavior for the task during EEG recording
 for sub in top_dir.glob("*"):
     sub_id = str(int(sub.name[-1]) + sub_id_offset)
-    for i_c, cond in enumerate(["Ears Free", "Molds 1"]):
+    for i_c, cond in enumerate(["Free Ears", "Molds 1"]):
         folder = sub / cond
         runs = list(folder.glob("*"))
         runs.sort()
@@ -81,7 +81,7 @@ top_dir = root / "data" / "original" / "behavior" / "localization"
 for sub in top_dir.glob("*"):
     sub_id = str(int(sub.name[-1]) + sub_id_offset)
     print(sub_id)
-    for i_c, cond in enumerate(["Ears Free", "Molds"]):
+    for i_c, cond in enumerate(["Free Ears", "Molds"]):
         folder = sub / cond
         runs = list(folder.glob("*localization*"))
         runs.sort()

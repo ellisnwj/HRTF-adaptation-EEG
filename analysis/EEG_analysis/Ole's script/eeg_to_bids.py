@@ -1,7 +1,7 @@
 """
 Convert EEG data to the bids format.
 For each participant there are three folders:
-    Ears Free: initial recording before molds were inserted. In the BIDS format, this task is called "free_ears".
+    Free Ears: initial recording before molds were inserted. In the BIDS format, this task is called "free_ears".
     Molds 1: recording after insertion of molds. In the BIDS format, this task is called "molds_naive"
     Molds 2: recoring after 5 days of adaptation. In the BIDS format, this task is called "molds_trained".
 Each recording consists of 5 runs.
@@ -38,7 +38,7 @@ event_desc = {
 
 for sub in (root / "data" / "original" / "EEG").glob("P*"):
     sub_id = str(int(sub.name[-1]) + sub_id_offset)
-    for session, folder_name in enumerate(["Ears Free", "Molds 1", "Molds 2"]):
+    for session, folder_name in enumerate(["Free Ears", "Molds 1", "Molds 2"]):
         raw = []
         for run in (sub / folder_name).glob("*.vhdr"):
             run_id = str(int(run.name.split(".")[0][-1]) + 1)

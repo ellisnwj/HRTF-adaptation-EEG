@@ -17,9 +17,9 @@ all conditions and one with the average of each condition.
 """
 
 evoked = []
-conditions = ['Ears Free', 'Molds 1', 'Molds 2']
+conditions = ['Free Ears', 'Molds 1', 'Molds 2']
 elevation_conditions = {"37.5": [], "12.5": [], "-12.5": [], "-37.5": []}
-evoked_conditions = {'Ears Free': deepcopy(elevation_conditions), 'Molds 1': deepcopy(elevation_conditions),
+evoked_conditions = {'Free Ears': deepcopy(elevation_conditions), 'Molds 1': deepcopy(elevation_conditions),
                      'Molds 2': deepcopy(elevation_conditions),}
 
 for condition in conditions:  # iterate over ear conditions

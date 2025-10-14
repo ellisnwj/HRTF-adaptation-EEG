@@ -13,10 +13,9 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'test'
+subject_id = 'VD'
 condition = 'Free Ears'
-subject_dir = data_dir / 'experiment_2' / subject_id / condition
-
+subject_dir = Path.cwd() / 'data' / 'control' / subject_id / condition
 
 repetitions = 6  # number of repetitions per speaker
 target_speakers = (19, 21, 23, 25, 27)
@@ -28,7 +27,7 @@ def familiarization_test(target_speakers, repetitions, subject_dir):
                  ['RX82', 'RX8', data_dir / 'rcx' / 'play_probe.rcx'],
                  ['RP2', 'RP2', data_dir / 'rcx' / 'play_rec_adapter.rcx']]
     freefield.initialize('dome', device=proc_list, sensor_tracking=True)
-    freefield.load_equalization(file=Path.cwd() / 'data' / 'calibration' / 'calibration_dome_central.pkl')
+    # freefield.load_equalization(file=Path.cwd() / 'data' / 'calibration' / 'calibration_dome_central.pkl')
     freefield.set_logger('error')  # only forward messages when errors occur
 
     # --- generate sounds ---- #
@@ -56,7 +55,8 @@ def familiarization_test(target_speakers, repetitions, subject_dir):
     dac_delay_RP2 = 30
     dac_delay = dac_delay_RX8 - dac_delay_RP2
     probe_ramp_onset = adapter_ramp_onset - sound_travel_delay - dac_delay
-    freefield.write(tag='probe_onset', value=probe_ramp_onset, processors='RX81')
+    freefield.write(tag=''
+                        'probe_onset', value=probe_ramp_onset, processors='RX81')
 
     # signal tone
     tone = slab.Sound.tone(frequency=1000, duration=0.25, level=70)
@@ -126,7 +126,6 @@ def play_trial(target_speaker_id):
 
     print(f'{sequence.this_n}')
     return numpy.array((pose, (probe_speaker.azimuth, probe_speaker.elevation)))
-
 
 
 if __name__ == "__main__":

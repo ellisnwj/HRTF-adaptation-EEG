@@ -12,7 +12,7 @@ data_dir = Path.cwd() / 'data'
 fs = 48828
 slab.set_default_samplerate(fs)
 
-subject_id = 'P5'
+subject_id = 'AGM'
 subject_dir = data_dir / 'experiment' / 'behavior' / 'localization' / subject_id / 'Molds'
 try:
     sequence = localization.load_latest(subject_dir)
@@ -26,7 +26,7 @@ except:
 # target_time: time matching head direction required to finish a trial
 # target_p: target speaker probabilities based on previous localization accuracy
 
-def hrtf_training(max_pulse_interval=500, target_size=3, target_time=0.5, trial_time=10, game_time=90, target_p=None):
+def hrtf_training(max_pulse_interval=500, target_size=5, target_time=0.5, trial_time=20, game_time=160, target_p=None):
     global proc_list, speakers, sensor, game_start, buzzer, end, pulse_attr, goal_attr, \
            offset, prep_time, score, coin, coins
     # initialize setup

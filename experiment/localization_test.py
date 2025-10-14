@@ -12,9 +12,9 @@ from analysis.plotting.localization_plot import localization_accuracy
 
 fs = 48828
 slab.set_default_samplerate(fs)
-subject_id = 'test'
+subject_id = 'AGM'
 condition = 'Free Ears'
-data_dir = Path.cwd() / 'data' / 'experiment_2' / subject_id / condition
+data_dir = Path.cwd() / 'data' / 'control' / subject_id / condition
 
 repetitions = 3  # number of repetitions per speaker
 
@@ -22,7 +22,6 @@ def localization_test(subject_id, data_dir, condition, repetitions):
     global speakers, stim, sensor, tone, file_name
     if not freefield.PROCESSORS.mode:
         freefield.initialize('dome', default='play_rec', sensor_tracking=True)
-    freefield.load_equalization(Path.cwd() / 'data' / 'calibration' / 'calibration_dome_01.03.pkl')
     freefield.set_logger('warning')
 
     # generate stimulus
@@ -52,7 +51,7 @@ def localization_test(subject_id, data_dir, condition, repetitions):
             dist[i] = numpy.sqrt(diff[0] ** 2 + diff[1] ** 2)
         if all(dist >= 35):  # check if distance is never smaller than 35°
             break
-    trial_sequence = slab.Trialsequence(trials=range(len(sequence)))
+    trial_sequence = slab.Trialsequence(sequence)
     # loop over trials
     data_dir.mkdir(parents=True, exist_ok=True)  # create subject RCX_files directory if it doesnt exist
     file_name = 'localization_' + subject_id + '_' + condition + date.strftime('_%d.%m')
@@ -62,14 +61,14 @@ def localization_test(subject_id, data_dir, condition, repetitions):
         counter += 1
     played_bell = False
     print('Starting...')
-    for index in trial_sequence:
+    for speaker_id in trial_sequence:
         progress = int(trial_sequence.this_n / trial_sequence.n_trials * 100)
         if progress == 50 and played_bell is False:
-            freefield.set_signal_and_speaker(signal=bell, speaker=23)
+            freefield.set_signal_and_speaker(signal=bell, speaker=23, equalize=False)
             freefield.play()
             freefield.wait_to_finish_playing()
             played_bell = True
-        trial_sequence.add_response(play_trial(sequence[index], progress))
+        trial_sequence.add_response(play_trial(speaker_id, progress))
         trial_sequence.save_pickle(data_dir / file_name, clobber=True)
     freefield.halt()
     print('localization test completed!')
@@ -85,7 +84,7 @@ def play_trial(speaker_id, progress):
     stim = slab.Sound.sequence(noise, silence, noise, silence, noise,
                                silence, noise, silence, noise)
     stim = stim.ramp(when='both', duration=0.01)
-    freefield.set_signal_and_speaker(signal=stim, speaker=speaker_id, equalize=True)
+    freefield.set_signal_and_speaker(signal=stim, speaker=speaker_id, equalize=False)
     freefield.play()
     freefield.wait_to_finish_playing()
     response = 0
@@ -98,7 +97,7 @@ def play_trial(speaker_id, progress):
         response = freefield.read('response', processor='RP2')
     if all(pose):
         print('Response| azimuth: %.1f, elevation: %.1f' % (pose[0], pose[1]))
-    freefield.set_signal_and_speaker(signal=tone, speaker=23)
+    freefield.set_signal_and_speaker(signal=tone, speaker=23, equalize=False)
     freefield.play()
     freefield.wait_to_finish_playing()
     return numpy.array((pose, target))
@@ -107,8 +106,8 @@ if __name__ == "__main__":
     sequence = localization_test(subject_id, data_dir, condition, repetitions)
     fig, axis = plt.subplots()
     elevation_gain, ele_rmse, ele_var, az_rmse, az_var = localization_accuracy(sequence, axis=axis,
-                                                                            show=True, plot_dim=2, binned=True)
-    axis.set_title(file_name)
+                                                                 show=True, plot_dim=2, binned=True)
+    axis.set_title(f"{file_name} EG: {elevation_gain}")
     (data_dir / 'images').mkdir(parents=True, exist_ok=True)  # create subject image directory
     fig.savefig(data_dir / 'images' / str(file_name + '.png'), format='png')  # save image
     # elevation_gain, ele_rmse, ele_var, az_rmse, az_var = localization_accuracy(sequence, show=True, plot_dim=1)

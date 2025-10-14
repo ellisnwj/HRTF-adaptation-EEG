@@ -13,9 +13,9 @@ picks = ['FT10']
 
 
 evoked = []
-conditions = ['Ears Free', 'Molds 1', 'Molds 2']
+conditions = ['Free Ears', 'Molds 1', 'Molds 2']
 elevation_conditions = {"37.5": [], "12.5": [], "-12.5": [], "-37.5": []}
-evoked_conditions = {'Ears Free': deepcopy(elevation_conditions), 'Molds 1': deepcopy(elevation_conditions),
+evoked_conditions = {'Free Ears': deepcopy(elevation_conditions), 'Molds 1': deepcopy(elevation_conditions),
                      'Molds 2': deepcopy(elevation_conditions),}
 
 for condition in conditions:  # iterate over ear conditions
@@ -44,7 +44,7 @@ for condition_idx, condition in enumerate(conditions):
         axis[0, subj_idx].set_title(subject_paths[subj_idx].name)
         axis[2, subj_idx].set_xlabel('Time (ms)')
         ax = axis[condition_idx, subj_idx]
-        for i, key in enumerate(evoked_conditions['Ears Free'].keys()):
+        for i, key in enumerate(evoked_conditions['Free Ears'].keys()):
             ax.plot(times, evoked_conditions[condition][key][subj_idx], c=colors[i], label=key + '°')
         ylim = ax.get_ylim()
         ax.vlines(x=[-1, 0], ymin=ylim[0], ymax=ylim[1], color='black', linestyles='dashed', linewidth=.5)

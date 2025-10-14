@@ -8,19 +8,20 @@ date = datetime.datetime.now()
 from pathlib import Path
 
 samplerate = 48828
+
 slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'test'
+subject_id = 'AGM'
 condition = 'Free Ears'
-subject_dir = data_dir / 'experiment_2' / subject_id / condition
+subject_dir = Path.cwd() / 'data' / 'control' / subject_id / condition
 
 repetitions = 60  # number of repetitions per speaker
-n_blocks = 4
+n_blocks = 6
 target_speakers = (20, 22, 24, 26)
 probe_level = 75
-adapter_levels = (44, 49)  # calibrated adapter levels, left first
+adapter_levels = (51, 54)  # calibrated adapter levels, left first
 isi = 1.0  # inter stim interval in seconds
 isi_corrected = isi - 0.43  # account for the time it takes to write stimuli to the buffer
 
@@ -30,10 +31,8 @@ def eeg_test(target_speakers, repetitions, subject_dir):
                  ['RX82', 'RX8', data_dir / 'rcx' / 'play_probe.rcx'],
                  ['RP2', 'RP2', data_dir / 'rcx' / 'play_rec_adapter.rcx']]
     freefield.initialize('dome', device=proc_list, sensor_tracking=True)
-    freefield.load_equalization(file=Path.cwd() / 'data' / 'calibration' / 'calibration_dome_central.pkl')
-
-    # todo create a good calibration file
-    freefield.set_logger('error')
+    # freefield.load_equalization(data_dir / 'calibration' / 'calibration_dome_01.03.pkl')
+    # freefield.set_logger('info')
     # --- generate sounds ---- #
     # adapter
     # generate adapter
@@ -62,19 +61,21 @@ def eeg_test(target_speakers, repetitions, subject_dir):
 
     # signal tone
     tone = slab.Sound.tone(frequency=1000, duration=0.25, level=70)
-    freefield.set_signal_and_speaker(tone, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone', n_samples_tag='n_tone')
-    buzzer = slab.Sound(data_dir / 'sounds' / 'buzzer.wav')
+    freefield.set_signal_and_speaker(tone, 23, equalize=False, data_tag='data_tone', chan_tag='ch_tone', n_samples_tag='n_tone')
+    # buzzer = slab.Sound(data_dir / 'sounds' / 'buzzer.wav')
+    # buzzer.level -= 10
+    buzzer = slab.Sound.sequence(slab.Sound.tone(frequency=450, duration=.3, level=70),
+                                 slab.Sound.tone(frequency=300, duration=.45, level=70)).ramp('both', .01)
 
     # set adapter marker on RX82 to 1
     freefield.write('adapter marker', value=1, processors='RX82')
-
-    input("Press Enter to start.")
-    # get reference head pose: make sure participants heads are oriented at the fixation mark!
 
     # create subject folder
     subject_dir.mkdir(parents=True, exist_ok=True)  # create subject RCX_files directory if it doesnt exist
 
     for block in range(n_blocks):
+        input("Press Enter to start.")
+        # get reference head pose: make sure participants heads are oriented at the fixation mark!
         pose_offset = freefield.calibrate_sensor(False, False)  # calibrate sensor once at the beginning of each block
         # get trial indices for response trials
         n_trials = int(repetitions * len(target_speakers))
@@ -101,12 +102,10 @@ def eeg_test(target_speakers, repetitions, subject_dir):
             sequence.add_response(play_trial(target_speaker_id))  # play trial
             time.sleep(isi_corrected)  # account for the time it needs to write stimuli to processor buffer (0.195 seconds)
             sequence.save_pickle(file_path, clobber=True)    # save trialsequence
-        input("Press Enter to start the next Block.")
     freefield.halt()
     return
 
 def play_trial(target_speaker_id):
-
     test_headpose()
     # generate and write probe
     probe = random.choice(probes)
@@ -116,7 +115,7 @@ def play_trial(target_speaker_id):
     [probe_speaker] = freefield.pick_speakers(target_speaker_id)
 
     # write probe and adapter to RCX_files
-    freefield.set_signal_and_speaker(probe, target_speaker_id, equalize=True, data_tag='data_probe',
+    freefield.set_signal_and_speaker(probe, target_speaker_id, equalize=False, data_tag='data_probe',
                                      chan_tag='probe_ch', n_samples_tag='n_probe')
     freefield.write(tag='data_adapter_l', value=adapter_l.data, processors='RP2')
     freefield.write(tag='data_adapter_r', value=adapter_r.data, processors='RP2')
@@ -135,11 +134,12 @@ def play_trial(target_speaker_id):
     if sequence.this_n in response_trials.tolist():
         # play tone to indicate to the participant that this is a response trial
         freefield.write(tag='ch_tone', value=1, processors='RX81')
+        time.sleep(.2)
         freefield.play('zBusB')
         time.sleep(0.25)  # wait until the tone has played
         freefield.write(tag='ch_tone', value=99, processors='RX81')
         # -- get head pose offset --- #
-        # freefield.calibrate_sensor(led_feedback=False, button_control=False)
+        freefield.calibrate_sensor(led_feedback=False, button_control=False)
         # get headpose with a button response
         time.sleep(0.25)
         response = 0
@@ -151,6 +151,7 @@ def play_trial(target_speaker_id):
                 print('no head pose detected', end="\r", flush=True)
             response = freefield.read('response', processor='RP2')
         if all(pose):
+            print('Target| azimuth: %.1f, elevation: %.1f' % (probe_speaker.azimuth, probe_speaker.elevation))
             print('Response| azimuth: %.1f, elevation: %.1f' % (pose[0], pose[1]))
         # play confirmation sound
         freefield.write(tag='ch_tone', value=1, processors='RX81')
@@ -159,7 +160,7 @@ def play_trial(target_speaker_id):
         freefield.write(tag='ch_tone', value=99, processors='RX81')
         # participants should return to the fixation cross and press a button to continue
         freefield.wait_for_button()
-
+        pose = (None, None)
     # otherwise return empty pose
     else:
         pose = (None, None)
@@ -168,13 +169,13 @@ def play_trial(target_speaker_id):
 
 def test_headpose():
     pose = freefield.get_head_pose(method='sensor')
-    while numpy.abs(pose[1]) > 3:
+    while numpy.abs(pose[1]) > 5:
         # play warning sound
-        freefield.set_signal_and_speaker(buzzer, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone',
+        freefield.set_signal_and_speaker(buzzer, 23, equalize=False, data_tag='data_tone', chan_tag='ch_tone',
                                          n_samples_tag='n_tone')
         freefield.play('zBusB')
         time.sleep(1)  # wait until the tone has played
-        freefield.set_signal_and_speaker(tone, 23, equalize=True, data_tag='data_tone', chan_tag='ch_tone',
+        freefield.set_signal_and_speaker(tone, 23, equalize=False, data_tag='data_tone', chan_tag='ch_tone',
                                          n_samples_tag='n_tone')
         freefield.write(tag='ch_tone', value=99, processors='RX81')
         freefield.wait_for_button()  # wait for button response

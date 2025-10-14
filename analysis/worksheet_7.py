@@ -58,7 +58,7 @@ ax.set_zlabel('imag amplitude')
 # --- Exercise 2: convolve EEG signal with a complex morlet wavelet --- #
 
 # load sample data  # todo this could be epochs around an auditory stimulus
-fif_file = Path.cwd() / 'data' / 'experiment' / 'EEG' / 'P1' / 'Ears Free' / 'preprocessed' /'P1_Ears Free-epo.fif'
+fif_file = Path.cwd() / 'data' / 'experiment' / 'EEG' / 'P1' / 'Free Ears' / 'preprocessed' /'P1_Ears Free-epo.fif'
 #raw = mne.io.read_raw_brainvision(header_file, preload=True)
 epochs = mne.read_epochs(fname=fif_file)
 data = epochs.pick_channels(['Fz'])._data[0][0]   # single channel eeg data
