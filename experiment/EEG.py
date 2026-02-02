@@ -13,7 +13,7 @@ slab.set_default_samplerate(samplerate)
 data_dir = Path.cwd() / 'data'
 
 # initial test
-subject_id = 'AGM'
+subject_id = 'BK'
 condition = 'Free Ears'
 subject_dir = Path.cwd() / 'data' / 'control' / subject_id / condition
 
@@ -31,8 +31,8 @@ def eeg_test(target_speakers, repetitions, subject_dir):
                  ['RX82', 'RX8', data_dir / 'rcx' / 'play_probe.rcx'],
                  ['RP2', 'RP2', data_dir / 'rcx' / 'play_rec_adapter.rcx']]
     freefield.initialize('dome', device=proc_list, sensor_tracking=True)
-    # freefield.load_equalization(data_dir / 'calibration' / 'calibration_dome_01.03.pkl')
-    # freefield.set_logger('info')
+    freefield.load_equalization(data_dir / 'calibration' / 'calibration_dome_frontal.pkl')
+    freefield.set_logger('info')
     # --- generate sounds ---- #
     # adapter
     # generate adapter

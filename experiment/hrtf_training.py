@@ -12,7 +12,7 @@ data_dir = Path.cwd() / 'data'
 fs = 48828
 slab.set_default_samplerate(fs)
 
-subject_id = 'AGM'
+subject_id = 'GL'
 subject_dir = data_dir / 'experiment' / 'behavior' / 'localization' / subject_id / 'Molds'
 try:
     sequence = localization.load_latest(subject_dir)

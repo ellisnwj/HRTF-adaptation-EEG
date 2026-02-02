@@ -12,7 +12,7 @@ from analysis.plotting.localization_plot import localization_accuracy
 
 fs = 48828
 slab.set_default_samplerate(fs)
-subject_id = 'AGM'
+subject_id = 'BK'
 condition = 'Free Ears'
 data_dir = Path.cwd() / 'data' / 'control' / subject_id / condition
 
